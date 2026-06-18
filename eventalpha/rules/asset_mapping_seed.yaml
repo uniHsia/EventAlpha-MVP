@@ -1,0 +1,100 @@
+ai_export_control:
+  assets:
+    - asset_name: "国产 AI 芯片"
+      asset_type: "theme"
+      direction: "up"
+      relation: "direct_beneficiary"
+      benchmark: "沪深300"
+      confidence: 0.82
+      rationale: "海外 GPU 供应受限会提升国产替代关注度。"
+    - asset_name: "服务器"
+      asset_type: "industry"
+      direction: "up"
+      relation: "direct_beneficiary"
+      benchmark: "沪深300"
+      confidence: 0.74
+      rationale: "国产 AI 基础设施需求可能向国产服务器倾斜。"
+    - asset_name: "先进封装"
+      asset_type: "industry"
+      direction: "up"
+      relation: "indirect_beneficiary"
+      benchmark: "沪深300"
+      confidence: 0.62
+      rationale: "先进封装是国产 AI 芯片产业链的二阶环节。"
+    - asset_name: "国产 EDA"
+      asset_type: "theme"
+      direction: "up"
+      relation: "indirect_beneficiary"
+      benchmark: "沪深300"
+      confidence: 0.56
+      rationale: "国产设计工具关注度可能上升，但需要验证订单和政策。"
+    - asset_name: "半导体设备"
+      asset_type: "industry"
+      direction: "mixed"
+      relation: "second_order_watch"
+      benchmark: "沪深300"
+      confidence: 0.45
+      rationale: "设备端属于二阶映射，需要资本开支信号验证。"
+  watch_indicators:
+    - "国产芯片订单"
+    - "服务器招标"
+    - "云厂商资本开支"
+    - "政策补贴细则"
+geopolitical_conflict:
+  assets:
+    - asset_name: "原油"
+      asset_type: "commodity"
+      direction: "up"
+      relation: "direct_beneficiary"
+      benchmark: "全球权益基准"
+      confidence: 0.78
+      rationale: "供应风险上升可能抬升原油风险溢价。"
+    - asset_name: "黄金"
+      asset_type: "commodity"
+      direction: "up"
+      relation: "risk_hedge"
+      benchmark: "美元指数"
+      confidence: 0.72
+      rationale: "避险情绪可能提升黄金需求。"
+  watch_indicators:
+    - "冲突是否影响核心产油区"
+    - "运输通道是否受阻"
+    - "原油库存水平"
+rate_policy:
+  assets:
+    - asset_name: "成长风格指数"
+      asset_type: "index"
+      direction: "neutral"
+      relation: "liquidity_sensitive"
+      benchmark: "沪深300"
+      confidence: 0.55
+      rationale: "利率变化会影响估值和风险偏好。"
+  watch_indicators:
+    - "政策声明措辞"
+    - "收益率曲线变化"
+    - "汇率反应"
+trade_tariff:
+  assets:
+    - asset_name: "出口链"
+      asset_type: "theme"
+      direction: "down"
+      relation: "potential_pressure"
+      benchmark: "沪深300"
+      confidence: 0.60
+      rationale: "关税可能压制相关出口链利润率。"
+  watch_indicators:
+    - "关税覆盖清单"
+    - "企业海外收入占比"
+earthquake_supply_chain:
+  assets:
+    - asset_name: "供应链替代主题"
+      asset_type: "theme"
+      direction: "watch"
+      relation: "watch"
+      benchmark: "沪深300"
+      confidence: 0.42
+      rationale: "需要验证受灾区域产能和替代能力。"
+  watch_indicators:
+    - "关键工厂是否停产"
+    - "全球库存是否紧张"
+    - "替代厂商认证情况"

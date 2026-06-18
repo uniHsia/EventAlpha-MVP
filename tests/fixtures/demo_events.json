@@ -1,0 +1,30 @@
+[
+  {
+    "title": "美国宣布升级 AI 芯片出口管制",
+    "source": "Reuters",
+    "source_type": "mainstream_media",
+    "language": "zh",
+    "raw_text": "Reuters 报道，美国宣布升级针对中国的 AI 芯片和先进 GPU 出口管制。该公告可能影响海外 GPU 供应，并提升国产 AI 芯片、服务器、先进封装和国产 EDA 的关注度。"
+  },
+  {
+    "title": "中东冲突升级，国际原油价格短线拉升",
+    "source": "Bloomberg",
+    "source_type": "mainstream_media",
+    "language": "zh",
+    "raw_text": "Bloomberg 报道，中东冲突升级引发市场对原油供应不确定性的担忧，黄金和原油价格短线波动。"
+  },
+  {
+    "title": "日本地震引发供应链扰动担忧",
+    "source": "AP",
+    "source_type": "mainstream_media",
+    "language": "zh",
+    "raw_text": "AP 报道，日本发生地震，市场担忧部分工厂和供应链可能短期受扰。当前尚未确认关键产能停产，供应链替代主题需要后续事实验证。"
+  },
+  {
+    "title": "央行宣布降息但市场反应平淡",
+    "source": "中国人民银行",
+    "source_type": "official",
+    "language": "zh",
+    "raw_text": "中国人民银行公告宣布下调政策利率。由于市场此前已有较充分降息预期，成长风格指数反应不明显，仍需观察收益率曲线和汇率变化。"
+  }
+]

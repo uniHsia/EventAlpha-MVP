@@ -1,0 +1,16 @@
+event_types:
+  ai_export_control:
+    keywords: ["AI 芯片", "人工智能芯片", "出口管制", "GPU", "先进芯片"]
+    description: "科技与贸易限制事件，重点关注国产替代、服务器、先进封装和 EDA。"
+  geopolitical_conflict:
+    keywords: ["中东冲突", "战争", "武装冲突", "原油", "地缘"]
+    description: "地缘政治冲突事件，重点关注能源、避险资产和风险偏好。"
+  rate_policy:
+    keywords: ["降息", "加息", "美联储", "央行", "利率"]
+    description: "央行和利率政策事件，重点关注流动性、汇率和权益估值。"
+  trade_tariff:
+    keywords: ["关税", "贸易", "进口限制", "出口限制"]
+    description: "贸易政策事件，重点关注出口链、进口替代和通胀影响。"
+  earthquake_supply_chain:
+    keywords: ["地震", "供应链", "停产", "工厂"]
+    description: "自然灾害和供应链扰动事件。"

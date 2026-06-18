@@ -1,0 +1,31 @@
+rules:
+  - rule_id: "RULE_AI_EXPORT_001"
+    event_type: "ai_export_control"
+    rule: "出口管制升级 -> 海外 GPU 供应受限 -> 国产 AI 芯片替代预期上升"
+    weight: 0.70
+    success_rate: 0.0
+    review_count: 0
+  - rule_id: "RULE_GEO_OIL_001"
+    event_type: "geopolitical_conflict"
+    rule: "中东冲突升级 -> 原油供应不确定性上升 -> 原油风险溢价抬升"
+    weight: 0.70
+    success_rate: 0.0
+    review_count: 0
+  - rule_id: "RULE_RATE_LIQ_001"
+    event_type: "rate_policy"
+    rule: "降息预期升温 -> 流动性预期改善 -> 风险偏好可能修复"
+    weight: 0.60
+    success_rate: 0.0
+    review_count: 0
+  - rule_id: "RULE_TARIFF_001"
+    event_type: "trade_tariff"
+    rule: "关税变化 -> 出口链成本和需求预期变化 -> 相关主题承压或分化"
+    weight: 0.55
+    success_rate: 0.0
+    review_count: 0
+  - rule_id: "RULE_SUPPLY_CHAIN_001"
+    event_type: "earthquake_supply_chain"
+    rule: "地震或停产传闻 -> 供应链扰动预期 -> 替代主题受到关注"
+    weight: 0.50
+    success_rate: 0.0
+    review_count: 0
