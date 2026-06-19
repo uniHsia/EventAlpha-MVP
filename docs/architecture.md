@@ -76,6 +76,15 @@ Input Layer
 - 输出：`ReviewResult`、`PredictionReviewSummary`。
 - 职责：逐资产计算资产收益、基准收益、超额收益，再汇总整条预测，区分方向正确和因果正确。
 
+## Market Data Provider Layer
+
+- 输入：资产名称、基准名称、复盘起始日期、`T+1/T+3/T+7`。
+- 输出：资产收益、基准收益，或价格序列。
+- 职责：屏蔽不同行情来源差异，让复盘 pipeline 只依赖 `MarketDataProvider`。
+- `MockMarketDataProvider` 返回固定收益，用于无数据 demo 和单元测试。
+- `CSVMarketDataProvider` 从本地 CSV close price 序列计算收益，用于验证真实行情接入前的接口。
+- 后续 `AKShareProvider` 应实现同一接口，替换 provider 即可，不应修改 ledger 和 review pipeline 主流程。
+
 ## Rule Update Layer
 
 - 输入：`PredictionReviewSummary`、原始规则。

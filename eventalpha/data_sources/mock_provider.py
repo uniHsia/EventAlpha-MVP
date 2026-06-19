@@ -2,6 +2,10 @@
 
 from __future__ import annotations
 
+from datetime import date, timedelta
+
+from eventalpha.schemas import PricePoint, PriceSeries
+
 from .base import MarketDataProvider
 
 
@@ -41,10 +45,36 @@ class MockMarketDataProvider(MarketDataProvider):
             ("全球权益基准", "T+3"): -0.004,
         }
 
-    def get_asset_return(self, asset_name: str, horizon: str) -> float:
+    def get_price_series(
+        self,
+        asset_name: str,
+        start_date: str,
+        end_date: str,
+    ) -> PriceSeries:
+        """Return a synthetic flat price series for interface compatibility."""
+        start = date.fromisoformat(start_date)
+        end = date.fromisoformat(end_date)
+        days = max((end - start).days, 0)
+        points = [
+            PricePoint(date=start + timedelta(days=offset), close=100.0)
+            for offset in range(days + 1)
+        ]
+        return PriceSeries(asset_name=asset_name, points=points)
+
+    def get_asset_return(
+        self,
+        asset_name: str,
+        horizon: str,
+        start_date: str | None = None,
+    ) -> float:
         """Return a fixed mock return for the asset."""
         return self.asset_returns.get((asset_name, horizon), 0.0)
 
-    def get_benchmark_return(self, benchmark: str, horizon: str) -> float:
+    def get_benchmark_return(
+        self,
+        benchmark: str,
+        horizon: str,
+        start_date: str | None = None,
+    ) -> float:
         """Return a fixed mock return for the benchmark."""
         return self.benchmark_returns.get((benchmark, horizon), 0.0)

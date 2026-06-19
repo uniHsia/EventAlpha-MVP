@@ -17,6 +17,7 @@ from .base import (
 from .card import EventCard
 from .event import RawNews, StructuredEvent
 from .ledger import PredictedAsset, PredictionLedgerEntry
+from .market import MarketDataError, MarketReturn, PricePoint, PriceSeries
 from .mapping import MappedAsset, MarketMapping
 from .reasoning import AntiSpuriousCheck, CausalChain, CausalStep
 from .review import DirectionEvaluation, PredictionReviewSummary, ReviewResult, ReviewTask
@@ -42,9 +43,13 @@ __all__ = [
     "ImpactScore",
     "MappedAsset",
     "MarketMapping",
+    "MarketDataError",
+    "MarketReturn",
     "PredictedAsset",
     "PredictionLedgerEntry",
     "PredictionReviewSummary",
+    "PricePoint",
+    "PriceSeries",
     "RISK_DISCLAIMER",
     "RawNews",
     "ReviewResult",

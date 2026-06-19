@@ -87,6 +87,12 @@ python scripts/run_demo_event.py
 python scripts/run_mock_review.py
 ```
 
+也可以使用本地 CSV 价格序列运行复盘 demo：
+
+```bash
+python scripts/run_csv_review.py
+```
+
 运行测试：
 
 ```bash

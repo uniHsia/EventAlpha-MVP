@@ -1,0 +1,71 @@
+国产 AI 芯片:
+  provider_symbol: 国产 AI 芯片
+  provider: csv
+  asset_type: theme
+  benchmark: 沪深300
+服务器:
+  provider_symbol: 服务器
+  provider: csv
+  asset_type: industry
+  benchmark: 沪深300
+先进封装:
+  provider_symbol: 先进封装
+  provider: csv
+  asset_type: industry
+  benchmark: 沪深300
+国产 EDA:
+  provider_symbol: 国产 EDA
+  provider: csv
+  asset_type: theme
+  benchmark: 沪深300
+半导体设备:
+  provider_symbol: 半导体设备
+  provider: csv
+  asset_type: industry
+  benchmark: 沪深300
+沪深300:
+  provider_symbol: 沪深300
+  provider: csv
+  asset_type: benchmark
+原油:
+  provider_symbol: 原油
+  provider: csv
+  asset_type: commodity
+  benchmark: 全球权益基准
+黄金:
+  provider_symbol: 黄金
+  provider: csv
+  asset_type: commodity
+  benchmark: 美元指数
+油气:
+  provider_symbol: 油气
+  provider: csv
+  asset_type: industry
+  benchmark: 全球权益基准
+军工:
+  provider_symbol: 军工
+  provider: csv
+  asset_type: theme
+  benchmark: 沪深300
+日经225:
+  provider_symbol: 日经225
+  provider: csv
+  asset_type: benchmark
+日本半导体材料:
+  provider_symbol: 日本半导体材料
+  provider: csv
+  asset_type: industry
+  benchmark: 日经225
+成长风格指数:
+  provider_symbol: 成长风格指数
+  provider: csv
+  asset_type: index
+  benchmark: 沪深300
+全球权益基准:
+  provider_symbol: 全球权益基准
+  provider: csv
+  asset_type: benchmark
+美元指数:
+  provider_symbol: 美元指数
+  provider: csv
+  asset_type: benchmark

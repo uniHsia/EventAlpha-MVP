@@ -90,8 +90,13 @@ def review_asset(
     horizon: str = "T+3",
 ) -> ReviewResult:
     """Review one predicted asset with deterministic mock market returns."""
-    actual = market_data.get_asset_return(asset.asset_name, horizon)
-    benchmark = market_data.get_benchmark_return(asset.benchmark, horizon)
+    start_date = prediction.publish_time.date().isoformat()
+    actual = market_data.get_asset_return(asset.asset_name, horizon, start_date=start_date)
+    benchmark = market_data.get_benchmark_return(
+        asset.benchmark,
+        horizon,
+        start_date=start_date,
+    )
     excess = round(actual - benchmark, 6)
     evaluation = evaluate_direction(asset.direction, actual, benchmark, excess)
 
