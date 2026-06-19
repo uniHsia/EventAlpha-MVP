@@ -209,6 +209,15 @@ python scripts/evaluate_llm_extraction_gold.py --real-llm --calibrated --write-r
 python scripts/evaluate_extraction_downstream.py --real-llm --calibrated --write-report
 ```
 
+Run optional LLM causal reasoning without replacing the default pipeline:
+
+```bash
+python scripts/run_llm_causal_pipeline.py
+python scripts/run_llm_causal_pipeline.py --real-llm --failure-mode fallback
+python scripts/evaluate_llm_causal_reasoning.py
+python scripts/evaluate_llm_causal_reasoning.py --real-llm --write-report
+```
+
 ## 后续路线
 
 1. 用真实 LLM 替换 mock Agent，但保持 schema 和 pipeline 接口稳定。

@@ -12,6 +12,26 @@ def _steps(items: list[tuple[str, str]]) -> list[CausalStep]:
     ]
 
 
+class RuleBasedCausalReasoningAgent:
+    """Thin wrapper around the deterministic causal reasoning function."""
+
+    warnings: list[str] = []
+
+    def build_chain(
+        self,
+        structured_event: StructuredEvent,
+        verification=None,
+        impact_score: ImpactScore | None = None,
+        supported_assets: list[str] | None = None,
+        extraction_warnings: list[str] | None = None,
+    ) -> CausalChain:
+        """Build a causal chain using the existing rule-based implementation."""
+        if impact_score is None:
+            raise ValueError("impact_score is required for rule-based causal reasoning")
+        self.warnings = []
+        return generate_causal_chain(structured_event, impact_score)
+
+
 def generate_causal_chain(event: StructuredEvent, score: ImpactScore) -> CausalChain:
     """Generate a fixed causal chain by event type."""
     if event.event_type == "ai_export_control":
