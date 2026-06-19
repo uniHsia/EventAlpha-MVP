@@ -173,6 +173,14 @@ python scripts/run_llm_extraction_demo.py --real-llm --base-url https://api.deep
 
 LLM traces are written to `data/llm_traces/` and are ignored by git. LLM output is always validated by Pydantic before business code can use it.
 
+Run the full event pipeline with optional LLM extraction:
+
+```bash
+python scripts/run_llm_event_pipeline.py
+python scripts/run_llm_event_pipeline.py --real-llm
+python scripts/run_llm_event_pipeline.py --real-llm --failure-mode fallback
+```
+
 ## 后续路线
 
 1. 用真实 LLM 替换 mock Agent，但保持 schema 和 pipeline 接口稳定。

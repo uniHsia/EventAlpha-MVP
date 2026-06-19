@@ -11,14 +11,14 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
+from eventalpha.agents import LLMExtractionAgent
 from eventalpha.llm import (
     LLMConfigurationError,
+    LLMTraceWriter,
     MockLLMClient,
     OpenAICompatibleLLMClient,
-    PromptTemplate,
     StructuredRunner,
 )
-from eventalpha.llm.schema_utils import pydantic_to_json_schema
 from eventalpha.schemas import RISK_DISCLAIMER, RawNews, StructuredEvent
 
 
@@ -28,21 +28,9 @@ def run_llm_extraction(
     trace_dir: str | Path | None = None,
 ) -> StructuredEvent:
     """Extract a StructuredEvent with a structured LLM client."""
-    from eventalpha.llm import LLMTraceWriter
-
-    template = PromptTemplate.from_file("eventalpha/prompts/extraction_event.md")
-    prompt = template.render(
-        json_schema=json.dumps(pydantic_to_json_schema(StructuredEvent), ensure_ascii=False),
-        raw_news_json=json.dumps(raw_news.model_dump(mode="json"), ensure_ascii=False, indent=2),
-    )
     trace_writer = LLMTraceWriter(trace_dir=trace_dir) if trace_dir else LLMTraceWriter()
     runner = StructuredRunner(client=client, trace_writer=trace_writer)
-    return runner.run(
-        prompt=prompt,
-        output_schema=StructuredEvent,
-        system_prompt="You are a structured event extraction component. Return JSON only.",
-        prompt_name="extraction_event",
-    )
+    return LLMExtractionAgent(runner=runner).extract(raw_news)
 
 
 def _load_demo_news(index: int = 0) -> RawNews:
@@ -88,4 +76,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-

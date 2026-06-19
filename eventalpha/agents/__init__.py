@@ -4,7 +4,8 @@ from .anti_spurious import check_spurious_reasoning
 from .card_generation import generate_event_card
 from .causal_reasoning import generate_causal_chain
 from .credibility import verify_event
-from .extraction import extract_event
+from .extraction import RuleBasedExtractionAgent, extract_event
+from .llm_extraction import LLMExtractionAgent
 from .market_mapping import map_event_to_markets
 from .review_learning import evaluate_direction, review_asset, review_prediction, summarize_reviews
 from .scoring import score_event
@@ -15,7 +16,9 @@ __all__ = [
     "evaluate_direction",
     "generate_causal_chain",
     "generate_event_card",
+    "LLMExtractionAgent",
     "map_event_to_markets",
+    "RuleBasedExtractionAgent",
     "review_asset",
     "review_prediction",
     "score_event",

@@ -6,10 +6,10 @@ from typing import Any
 
 from eventalpha.agents import (
     check_spurious_reasoning,
-    extract_event,
     generate_causal_chain,
     generate_event_card,
     map_event_to_markets,
+    RuleBasedExtractionAgent,
     score_event,
     verify_event,
 )
@@ -21,11 +21,14 @@ def run_event_pipeline(
     raw_news: RawNews,
     ledger_service: LedgerService | None = None,
     persist: bool = True,
+    extraction_agent=None,
 ) -> dict[str, Any]:
     """Run the MVP event-analysis pipeline for one raw news item."""
     ledger = ledger_service or LedgerService()
 
-    event = extract_event(raw_news)
+    extractor = extraction_agent or RuleBasedExtractionAgent()
+    event = extractor.extract(raw_news)
+    extraction_warnings = list(getattr(extractor, "warnings", []))
     verification = verify_event(raw_news, event)
     score = score_event(event, verification)
     causal_chain = generate_causal_chain(event, score)
@@ -65,6 +68,7 @@ def run_event_pipeline(
     return {
         "raw_news": raw_news,
         "structured_event": event,
+        "extraction_warnings": extraction_warnings,
         "verification": verification,
         "impact_score": score,
         "causal_chain": causal_chain,

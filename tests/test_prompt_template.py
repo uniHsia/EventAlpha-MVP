@@ -29,7 +29,15 @@ def test_bundled_extraction_prompt_loads() -> None:
     """The bundled extraction prompt should be available."""
     template = PromptTemplate.from_file("eventalpha/prompts/extraction_event.md")
 
-    rendered = template.render(json_schema="{}", raw_news_json="{}")
+    rendered = template.render(
+        json_schema="{}",
+        raw_news_json="{}",
+        raw_title="demo",
+        raw_text="demo text",
+        source="Reuters",
+        source_type="mainstream_media",
+        publish_time="2026-06-19T00:00:00Z",
+        supported_event_types="ai_export_control, unknown",
+    )
 
     assert "StructuredEvent" in rendered
-

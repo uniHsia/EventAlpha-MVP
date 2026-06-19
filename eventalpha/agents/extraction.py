@@ -5,6 +5,14 @@ from __future__ import annotations
 from eventalpha.schemas import RawNews, StructuredEvent
 
 
+class RuleBasedExtractionAgent:
+    """Thin class wrapper around the existing rule-based extractor."""
+
+    def extract(self, raw_news: RawNews) -> StructuredEvent:
+        """Extract a structured event using the existing keyword rules."""
+        return extract_event(raw_news)
+
+
 def extract_event(raw_news: RawNews) -> StructuredEvent:
     """Extract a structured event from raw text using keyword rules."""
     text = f"{raw_news.title} {raw_news.raw_text}"

@@ -55,31 +55,62 @@ class OpenAICompatibleLLMClient:
         """Return a Pydantic object from a real OpenAI-compatible API call."""
         last_error: Exception | None = None
         for _ in range(max_retries + 1):
-            try:
-                raw_output = self._call_chat_completion(
-                    prompt=prompt,
-                    schema=schema,
-                    system_prompt=system_prompt,
-                    temperature=temperature,
-                    use_json_schema=True,
-                )
-            except LLMCallError as exc:
-                if self._looks_like_json_schema_unsupported(exc):
-                    raw_output = self._call_chat_completion(
-                        prompt=self._prompt_with_schema(prompt, schema),
-                        schema=schema,
-                        system_prompt=system_prompt,
-                        temperature=temperature,
-                        use_json_schema=False,
-                    )
-                else:
-                    raise
+            raw_output = self._call_with_best_response_format(
+                prompt=prompt,
+                schema=schema,
+                system_prompt=system_prompt,
+                temperature=temperature,
+            )
             try:
                 self.last_raw_output = raw_output
                 return validate_structured_output(raw_output, schema)
             except LLMOutputValidationError as exc:
                 last_error = exc
         raise LLMOutputValidationError(str(last_error) if last_error else "LLM output failed validation")
+
+    def _call_with_best_response_format(
+        self,
+        prompt: str,
+        schema: type[BaseModel],
+        system_prompt: str | None,
+        temperature: float,
+    ) -> str:
+        """Try the strictest supported structured output mode first."""
+        try:
+            return self._call_chat_completion(
+                prompt=prompt,
+                schema=schema,
+                system_prompt=system_prompt,
+                temperature=temperature,
+                use_json_schema=True,
+                include_response_format=True,
+            )
+        except LLMCallError as exc:
+            if not self._looks_like_response_format_unsupported(exc):
+                raise
+
+        fallback_prompt = self._prompt_with_schema(prompt, schema)
+        try:
+            return self._call_chat_completion(
+                prompt=fallback_prompt,
+                schema=schema,
+                system_prompt=system_prompt,
+                temperature=temperature,
+                use_json_schema=False,
+                include_response_format=True,
+            )
+        except LLMCallError as exc:
+            if not self._looks_like_response_format_unsupported(exc):
+                raise
+
+        return self._call_chat_completion(
+            prompt=fallback_prompt,
+            schema=schema,
+            system_prompt=system_prompt,
+            temperature=temperature,
+            use_json_schema=False,
+            include_response_format=False,
+        )
 
     def _call_chat_completion(
         self,
@@ -88,18 +119,24 @@ class OpenAICompatibleLLMClient:
         system_prompt: str | None,
         temperature: float,
         use_json_schema: bool,
+        include_response_format: bool = True,
     ) -> str:
         messages: list[dict[str, str]] = []
         if system_prompt:
             messages.append({"role": "system", "content": system_prompt})
         messages.append({"role": "user", "content": prompt})
-        try:
-            completion = self._get_client().chat.completions.create(
-                model=self.model,
-                messages=messages,
-                temperature=temperature,
-                response_format=self._response_format(schema, use_json_schema=use_json_schema),
+        request = {
+            "model": self.model,
+            "messages": messages,
+            "temperature": temperature,
+        }
+        if include_response_format:
+            request["response_format"] = self._response_format(
+                schema,
+                use_json_schema=use_json_schema,
             )
+        try:
+            completion = self._get_client().chat.completions.create(**request)
         except Exception as exc:
             raise LLMCallError(self._sanitize_error(exc)) from exc
 
@@ -152,7 +189,16 @@ class OpenAICompatibleLLMClient:
             text = text.replace(self.api_key, "[REDACTED_API_KEY]")
         return text
 
-    def _looks_like_json_schema_unsupported(self, exc: Exception) -> bool:
+    def _looks_like_response_format_unsupported(self, exc: Exception) -> bool:
         text = str(exc).lower()
-        return "response_format" in text and ("json_schema" in text or "unsupported" in text)
-
+        if "response_format" not in text:
+            return False
+        unsupported_markers = [
+            "json_schema",
+            "unsupported",
+            "unavailable",
+            "not support",
+            "not_supported",
+            "invalid_request_error",
+        ]
+        return any(marker in text for marker in unsupported_markers)
