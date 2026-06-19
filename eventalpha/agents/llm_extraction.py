@@ -10,8 +10,15 @@ from typing import Literal, get_args
 from eventalpha.llm import PromptTemplate, StructuredRunner, pydantic_to_json_schema
 from eventalpha.schemas import EventType, RawNews, StructuredEvent
 from eventalpha.schemas.base import new_id, utc_now
-from eventalpha.services import AssetNormalizationService
+from eventalpha.services import (
+    AssetNormalizationService,
+    EntityNormalizationService,
+    IndustryNormalizationService,
+    NoveltyCalibrationService,
+    StatusCalibrationService,
+)
 
+from .credibility import verify_event
 from .extraction import RuleBasedExtractionAgent
 
 
@@ -38,6 +45,11 @@ class LLMExtractionAgent:
         fallback_agent=None,
         failure_mode: FailureMode = "strict",
         asset_normalizer: AssetNormalizationService | None = None,
+        entity_normalizer: EntityNormalizationService | None = None,
+        industry_normalizer: IndustryNormalizationService | None = None,
+        status_calibrator: StatusCalibrationService | None = None,
+        novelty_calibrator: NoveltyCalibrationService | None = None,
+        enable_calibration: bool = True,
     ) -> None:
         if failure_mode not in {"strict", "fallback"}:
             raise ValueError("failure_mode must be 'strict' or 'fallback'")
@@ -46,6 +58,11 @@ class LLMExtractionAgent:
         self.fallback_agent = fallback_agent or RuleBasedExtractionAgent()
         self.failure_mode = failure_mode
         self.asset_normalizer = asset_normalizer or AssetNormalizationService()
+        self.entity_normalizer = entity_normalizer or EntityNormalizationService()
+        self.industry_normalizer = industry_normalizer or IndustryNormalizationService()
+        self.status_calibrator = status_calibrator or StatusCalibrationService()
+        self.novelty_calibrator = novelty_calibrator or NoveltyCalibrationService()
+        self.enable_calibration = enable_calibration
         self.warnings: list[str] = []
 
     def extract(self, raw_news: RawNews) -> StructuredEvent:
@@ -91,7 +108,7 @@ class LLMExtractionAgent:
             )
             event_time = None
 
-        return event.model_copy(
+        processed = event.model_copy(
             update={
                 "event_id": new_id("EVT"),
                 "raw_id": raw_news.raw_id,
@@ -99,6 +116,57 @@ class LLMExtractionAgent:
                 "event_time": event_time,
                 "affected_assets_hint": normalized_assets,
                 "entities": entities,
+            }
+        )
+        if self.enable_calibration:
+            processed = self._calibrate_event(processed, raw_news)
+        return processed
+
+    def _calibrate_event(self, event: StructuredEvent, raw_news: RawNews) -> StructuredEvent:
+        """Apply lightweight status/entity/industry/novelty calibration."""
+        status_result = self.status_calibrator.calibrate_status(
+            event.status,
+            raw_news.title,
+            raw_news.raw_text,
+        )
+        if status_result.warnings:
+            self.warnings.extend(status_result.warnings)
+
+        normalized_entities = self.entity_normalizer.normalize_entity_list(event.entities)
+        if normalized_entities != event.entities:
+            self.warnings.append(
+                f"normalized entities: {event.entities} -> {normalized_entities}"
+            )
+        self.warnings.extend(self.entity_normalizer.warnings)
+
+        normalized_industries = self.industry_normalizer.normalize_industry_list(
+            event.affected_industries
+        )
+        if normalized_industries != event.affected_industries:
+            self.warnings.append(
+                "normalized affected_industries: "
+                f"{event.affected_industries} -> {normalized_industries}"
+            )
+        self.warnings.extend(self.industry_normalizer.warnings)
+
+        baseline_event = self.fallback_agent.extract(raw_news)
+        credibility_score = verify_event(raw_news, event).credibility_score
+        novelty_result = self.novelty_calibrator.calibrate_novelty(
+            llm_novelty=event.novelty_score,
+            rule_based_novelty=baseline_event.novelty_score,
+            event_type=event.event_type,
+            credibility_score=credibility_score,
+            raw_text=raw_news.raw_text,
+        )
+        if novelty_result.warnings:
+            self.warnings.extend(novelty_result.warnings)
+
+        return event.model_copy(
+            update={
+                "status": status_result.status,
+                "entities": normalized_entities,
+                "affected_industries": normalized_industries,
+                "novelty_score": novelty_result.novelty_score,
             }
         )
 

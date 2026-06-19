@@ -103,7 +103,6 @@ def test_postprocess_completes_entities_from_raw_text(tmp_path) -> None:
 
     assert "AI 芯片" in event.entities
     assert "GPU" in event.entities
-    assert "EDA" in event.entities
+    assert "国产 EDA" in event.entities
     assert "服务器" in event.entities
     assert any("completed entities" in warning for warning in agent.warnings)
-

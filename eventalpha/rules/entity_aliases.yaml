@@ -1,0 +1,98 @@
+美国:
+  aliases:
+    - 美方
+    - 美国政府
+    - 白宫
+
+中国:
+  aliases:
+    - 中方
+    - 中国大陆
+
+美国商务部:
+  aliases:
+    - 商务部
+    - U.S. Department of Commerce
+    - US Department of Commerce
+
+中国人民银行:
+  aliases:
+    - 央行
+    - 人民银行
+    - PBOC
+    - 中国央行
+
+美联储:
+  aliases:
+    - Federal Reserve
+    - Fed
+    - the Fed
+
+AI 芯片:
+  aliases:
+    - AI芯片
+    - 人工智能芯片
+
+GPU:
+  aliases:
+    - 先进 GPU
+    - 图形处理器
+
+国产 EDA:
+  aliases:
+    - EDA
+    - 国产EDA
+    - 电子设计自动化
+
+服务器:
+  aliases:
+    - AI服务器
+    - AI 服务器
+    - 算力服务器
+
+利率:
+  aliases:
+    - 降息
+    - 加息
+    - 政策利率
+    - 基准利率
+
+中东:
+  aliases:
+    - 中东地区
+    - 红海
+    - 波斯湾
+
+原油:
+  aliases:
+    - 石油
+    - 国际原油
+
+黄金:
+  aliases:
+    - 贵金属
+
+日本:
+  aliases:
+    - 日本地区
+
+地震:
+  aliases:
+    - 强震
+    - 震灾
+
+关税:
+  aliases:
+    - 进口关税
+    - 出口关税
+    - 加征关税
+
+贸易:
+  aliases:
+    - 贸易政策
+    - 贸易限制
+
+出口管制:
+  aliases:
+    - 出口限制
+    - 出口管制政策

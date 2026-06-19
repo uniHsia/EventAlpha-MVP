@@ -188,6 +188,13 @@ python scripts/evaluate_llm_extraction.py
 python scripts/evaluate_llm_extraction.py --real-llm --write-report
 ```
 
+Evaluate LLM extraction against the hand-written gold set and downstream consistency gates:
+
+```bash
+python scripts/evaluate_llm_extraction_gold.py
+python scripts/evaluate_extraction_downstream.py
+```
+
 ## 后续路线
 
 1. 用真实 LLM 替换 mock Agent，但保持 schema 和 pipeline 接口稳定。
