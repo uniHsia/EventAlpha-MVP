@@ -1,0 +1,332 @@
+ai_export_control:
+  description: AI 芯片出口管制事件
+  candidates:
+    - asset_name: 国产 AI 芯片
+      proxy_asset_name: 中证人工智能主题指数
+      provider: akshare
+      provider_type: index
+      provider_symbol: "930713"
+      asset_type: index
+      benchmark: 沪深300
+      direction: up
+      relation: proxy_theme_index_candidate
+      confidence: 0.64
+      mapping_status: candidate
+      validation_status: not_checked
+      min_price_points: 5
+      fallback_rank: 0
+      rationale: 中证人工智能主题指数可作为 AI 主题代理候选，但需要 live validation 和人工确认后才能升级。
+      verification_notes:
+        - 不直接标记 verified；若 AkShare 无法拉取则 fallback 到 CSV demo 资产。
+    - asset_name: 国产 AI 芯片
+      proxy_asset_name: 国产 AI 芯片
+      provider: csv
+      provider_symbol: 国产 AI 芯片
+      asset_type: theme
+      benchmark: 沪深300
+      direction: up
+      relation: direct_beneficiary
+      confidence: 0.82
+      mapping_status: candidate
+      validation_status: cache_only
+      min_price_points: 5
+      fallback_rank: 10
+      rationale: 第一版使用 CSV demo 主题资产，后续替换为真实指数、ETF 或可验证概念板块。
+      verification_notes:
+        - 后续需要确认可复盘的真实指数、ETF 或概念板块代理。
+    - asset_name: 服务器
+      proxy_asset_name: 服务器
+      provider: csv
+      provider_symbol: 服务器
+      asset_type: industry
+      benchmark: 沪深300
+      direction: up
+      relation: direct_beneficiary
+      confidence: 0.74
+      mapping_status: candidate
+      validation_status: cache_only
+      min_price_points: 5
+      fallback_rank: 10
+      rationale: 第一版使用 CSV demo 行业资产，真实代理待确认。
+      verification_notes:
+        - 后续需要确认服务器行业指数或 ETF。
+    - asset_name: 先进封装
+      proxy_asset_name: 先进封装
+      provider: csv
+      provider_symbol: 先进封装
+      asset_type: industry
+      benchmark: 沪深300
+      direction: up
+      relation: indirect_beneficiary
+      confidence: 0.62
+      mapping_status: candidate
+      validation_status: cache_only
+      min_price_points: 5
+      fallback_rank: 10
+      rationale: 第一版使用 CSV demo 行业资产，属于二阶映射。
+      verification_notes:
+        - 后续需要确认先进封装真实指数、ETF 或篮子。
+    - asset_name: 国产 EDA
+      proxy_asset_name: 国产 EDA
+      provider: csv
+      provider_symbol: 国产 EDA
+      asset_type: theme
+      benchmark: 沪深300
+      direction: up
+      relation: indirect_beneficiary
+      confidence: 0.56
+      mapping_status: candidate
+      validation_status: cache_only
+      min_price_points: 5
+      fallback_rank: 10
+      rationale: 第一版使用 CSV demo 主题资产，真实可交易代理待确认。
+      verification_notes:
+        - 国产 EDA 主题真实代理需要人工验证。
+    - asset_name: 半导体设备
+      proxy_asset_name: 中证全指半导体产品与设备指数
+      provider: akshare
+      provider_type: index
+      provider_symbol: "H30184"
+      asset_type: index
+      benchmark: 沪深300
+      direction: mixed
+      relation: semiconductor_index_candidate
+      confidence: 0.58
+      mapping_status: candidate
+      validation_status: not_checked
+      min_price_points: 5
+      fallback_rank: 0
+      rationale: 半导体产品与设备指数可作为半导体设备方向代理候选，但代码可用性需要 live validation。
+      verification_notes:
+        - 若 AkShare 拉取失败则 fallback 到 CSV demo 半导体设备资产。
+    - asset_name: 半导体设备
+      proxy_asset_name: 半导体设备
+      provider: csv
+      provider_symbol: 半导体设备
+      asset_type: industry
+      benchmark: 沪深300
+      direction: mixed
+      relation: second_order_watch
+      confidence: 0.45
+      mapping_status: candidate
+      validation_status: cache_only
+      min_price_points: 5
+      fallback_rank: 10
+      rationale: 第一版使用 CSV demo 行业资产，二阶映射需要资本开支信号验证。
+      verification_notes:
+        - 后续需要确认半导体设备真实代理并加入订单验证条件。
+
+geopolitical_conflict:
+  description: 中东冲突、战争或武装冲突事件
+  candidates:
+    - asset_name: 原油
+      proxy_asset_name: 原油
+      provider: csv
+      provider_symbol: 原油
+      asset_type: commodity
+      benchmark: 全球权益基准
+      direction: up
+      relation: direct_beneficiary
+      confidence: 0.78
+      mapping_status: candidate
+      validation_status: cache_only
+      min_price_points: 5
+      fallback_rank: 10
+      rationale: 第一版使用 CSV demo 商品资产，后续可替换为真实原油期货或 ETF 数据源。
+      verification_notes:
+        - 真实原油代理需要在后续 provider 中确认。
+    - asset_name: 黄金
+      proxy_asset_name: 黄金
+      provider: csv
+      provider_symbol: 黄金
+      asset_type: commodity
+      benchmark: 美元指数
+      direction: up
+      relation: risk_hedge
+      confidence: 0.72
+      mapping_status: candidate
+      validation_status: cache_only
+      min_price_points: 5
+      fallback_rank: 10
+      rationale: 第一版使用 CSV demo 商品资产，后续可替换为真实黄金期货或 ETF 数据源。
+      verification_notes:
+        - 黄金代理需同时验证美元指数影响。
+    - asset_name: 军工
+      proxy_asset_name: 中证军工
+      provider: akshare
+      provider_type: index
+      provider_symbol: "399967"
+      asset_type: index
+      benchmark: 沪深300
+      direction: mixed
+      relation: sentiment_watch
+      confidence: 0.55
+      mapping_status: verified
+      validation_status: not_checked
+      min_price_points: 5
+      fallback_rank: 0
+      rationale: 中证军工已配置 AkShare 指数代码，可作为军工风险偏好代理资产。
+      verification_notes:
+        - AkShare 联网失败时由 Router 清晰报错并不影响 CSV 资产。
+    - asset_name: 航空
+      proxy_asset_name: 航空
+      provider: missing
+      asset_type: industry
+      benchmark: 沪深300
+      direction: down
+      relation: cost_pressure
+      confidence: 0.40
+      mapping_status: missing
+      validation_status: not_checked
+      fallback_rank: 99
+      rationale: 尚未确认稳定可用的航空行业代理资产。
+      verification_notes:
+        - 需要后续确认真实指数、ETF 或行业篮子。
+
+earthquake_supply_chain:
+  description: 地震或自然灾害引发供应链扰动事件
+  candidates:
+    - asset_name: 供应链替代主题
+      proxy_asset_name: 中证全指半导体产品与设备指数
+      provider: akshare
+      provider_type: index
+      provider_symbol: "H30184"
+      asset_type: index
+      benchmark: 沪深300
+      direction: watch
+      relation: semiconductor_supply_chain_candidate
+      confidence: 0.40
+      mapping_status: unverified
+      validation_status: not_checked
+      min_price_points: 5
+      fallback_rank: 0
+      rationale: 半导体指数可作为供应链扰动候选观察项，但地震到半导体表现的因果链较弱，默认不启用。
+      verification_notes:
+        - 需要确认受灾区域实际影响半导体供应链后才能启用。
+    - asset_name: 供应链替代主题
+      proxy_asset_name: 供应链替代主题
+      provider: csv
+      provider_symbol: 供应链替代主题
+      asset_type: theme
+      benchmark: 沪深300
+      direction: watch
+      relation: watch
+      confidence: 0.42
+      mapping_status: candidate
+      validation_status: cache_only
+      min_price_points: 5
+      fallback_rank: 10
+      rationale: 第一版使用 CSV demo 观察资产，必须验证实际停产和替代能力。
+      verification_notes:
+        - 该映射伪相关风险高，后续需要事实证据强化。
+    - asset_name: 日本半导体材料
+      proxy_asset_name: 日本半导体材料
+      provider: csv
+      provider_symbol: 日本半导体材料
+      asset_type: industry
+      benchmark: 日经225
+      direction: watch
+      relation: regional_supply_chain_watch
+      confidence: 0.38
+      mapping_status: unverified
+      validation_status: cache_only
+      min_price_points: 5
+      fallback_rank: 20
+      rationale: 需要确认受灾区域是否确实影响半导体材料产能。
+      verification_notes:
+        - 默认不启用，除非用户显式允许 unverified mapping。
+
+rate_policy:
+  description: 央行加息、降息或利率政策事件
+  aliases:
+    - central_bank_policy
+  candidates:
+    - asset_name: 成长风格指数
+      proxy_asset_name: 创业板指
+      provider: akshare
+      provider_type: index
+      provider_symbol: "399006"
+      asset_type: index
+      benchmark: 沪深300
+      direction: neutral
+      relation: growth_beta_candidate
+      confidence: 0.58
+      mapping_status: candidate
+      validation_status: not_checked
+      min_price_points: 5
+      fallback_rank: 0
+      rationale: 创业板指可作为成长风格 beta 候选代理，但利率事件解释需结合提前定价和宏观变量。
+      verification_notes:
+        - live validation 通过后仍需人工判断是否升级 mapping_status。
+    - asset_name: 成长风格指数
+      proxy_asset_name: 成长风格指数
+      provider: csv
+      provider_symbol: 成长风格指数
+      asset_type: index
+      benchmark: 沪深300
+      direction: neutral
+      relation: liquidity_sensitive
+      confidence: 0.55
+      mapping_status: candidate
+      validation_status: cache_only
+      min_price_points: 5
+      fallback_rank: 10
+      rationale: 第一版使用 CSV demo 风格指数，真实成长风格代理待确认。
+      verification_notes:
+        - 降息事件需要增加提前定价和宏观变量覆盖检测。
+    - asset_name: 沪深300
+      proxy_asset_name: 沪深300
+      provider: akshare
+      provider_type: index
+      provider_symbol: "000300"
+      asset_type: benchmark
+      benchmark: 沪深300
+      direction: neutral
+      relation: broad_market_watch
+      confidence: 0.60
+      mapping_status: verified
+      validation_status: not_checked
+      min_price_points: 5
+      fallback_rank: 0
+      rationale: 沪深300已配置 AkShare 指数代码，可作为宽基权益代理。
+      verification_notes:
+        - 需要结合收益率曲线、汇率和提前定价判断。
+    - asset_name: 中证新能源汽车
+      proxy_asset_name: 中证新能源汽车
+      provider: akshare
+      provider_type: index
+      provider_symbol: "399976"
+      asset_type: index
+      benchmark: 沪深300
+      direction: mixed
+      relation: growth_beta_watch
+      confidence: 0.50
+      mapping_status: verified
+      validation_status: not_checked
+      min_price_points: 5
+      fallback_rank: 0
+      rationale: 中证新能源汽车已配置 AkShare 指数代码，可作为成长贝塔观察项之一。
+      verification_notes:
+        - 不应被单独解释为利率事件的确定性受益方向。
+
+central_bank_policy:
+  description: 央行政策事件别名，当前运行时事件类型仍为 rate_policy
+  aliases:
+    - rate_policy
+  candidates:
+    - asset_name: 成长风格指数
+      proxy_asset_name: 成长风格指数
+      provider: csv
+      provider_symbol: 成长风格指数
+      asset_type: index
+      benchmark: 沪深300
+      direction: neutral
+      relation: liquidity_sensitive
+      confidence: 0.55
+      mapping_status: candidate
+      validation_status: cache_only
+      min_price_points: 5
+      fallback_rank: 10
+      rationale: central_bank_policy 是文档别名；当前 pipeline 使用 rate_policy。
+      verification_notes:
+        - 后续如扩展 EventType，可切换到 central_bank_policy。

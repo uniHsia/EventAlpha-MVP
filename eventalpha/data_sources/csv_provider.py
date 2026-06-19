@@ -100,6 +100,8 @@ class CSVMarketDataProvider(MarketDataProvider):
 
     def _resolve_provider_symbol(self, asset_name: str) -> str:
         config = self.asset_mapping.get(asset_name, {})
+        if config.get("provider", "csv") != "csv":
+            return asset_name
         return config.get("provider_symbol", asset_name)
 
     def _load_csv(self) -> dict[str, PriceSeries]:

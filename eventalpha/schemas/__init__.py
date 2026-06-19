@@ -14,6 +14,13 @@ from .base import (
     SpuriousRisk,
     VerificationStatus,
 )
+from .asset_mapping import (
+    AssetCoverageStatus,
+    AssetProxyCandidate,
+    AssetProxyRule,
+    ProviderRoute,
+    ValidationStatus,
+)
 from .card import EventCard
 from .event import RawNews, StructuredEvent
 from .ledger import PredictedAsset, PredictionLedgerEntry
@@ -27,6 +34,9 @@ from .verification import EventVerification
 
 __all__ = [
     "AssetType",
+    "AssetCoverageStatus",
+    "AssetProxyCandidate",
+    "AssetProxyRule",
     "AntiSpuriousCheck",
     "CausalChain",
     "CausalStep",
@@ -50,6 +60,7 @@ __all__ = [
     "PredictionReviewSummary",
     "PricePoint",
     "PriceSeries",
+    "ProviderRoute",
     "RISK_DISCLAIMER",
     "RawNews",
     "ReviewResult",
@@ -58,5 +69,6 @@ __all__ = [
     "SourceClassification",
     "SpuriousRisk",
     "StructuredEvent",
+    "ValidationStatus",
     "VerificationStatus",
 ]
