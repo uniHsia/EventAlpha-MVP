@@ -38,6 +38,7 @@ def test_bundled_extraction_prompt_loads() -> None:
         source_type="mainstream_media",
         publish_time="2026-06-19T00:00:00Z",
         supported_event_types="ai_export_control, unknown",
+        supported_asset_names="国产 AI 芯片, 国产 EDA",
     )
 
     assert "StructuredEvent" in rendered

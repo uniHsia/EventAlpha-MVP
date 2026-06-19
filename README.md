@@ -181,6 +181,13 @@ python scripts/run_llm_event_pipeline.py --real-llm
 python scripts/run_llm_event_pipeline.py --real-llm --failure-mode fallback
 ```
 
+Evaluate and normalize LLM extraction quality before replacing more agents:
+
+```bash
+python scripts/evaluate_llm_extraction.py
+python scripts/evaluate_llm_extraction.py --real-llm --write-report
+```
+
 ## 后续路线
 
 1. 用真实 LLM 替换 mock Agent，但保持 schema 和 pipeline 接口稳定。
