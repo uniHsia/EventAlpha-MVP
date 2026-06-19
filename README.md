@@ -195,6 +195,20 @@ python scripts/evaluate_llm_extraction_gold.py
 python scripts/evaluate_extraction_downstream.py
 ```
 
+Phase 3B.7 adds entity keyword completion and gold-based downstream alert metrics:
+
+- `missed_alert_count`: gold expects alert but calibrated LLM misses it.
+- `over_alert_count`: calibrated LLM alerts when gold does not expect one.
+- `gold_event_level_mismatch_count`: calibrated LLM level differs from gold.
+- `gold_trigger_alert_mismatch_count`: calibrated LLM alert flag differs from gold.
+
+Real DeepSeek/OpenAI-compatible recheck:
+
+```bash
+python scripts/evaluate_llm_extraction_gold.py --real-llm --calibrated --write-report
+python scripts/evaluate_extraction_downstream.py --real-llm --calibrated --write-report
+```
+
 ## 后续路线
 
 1. 用真实 LLM 替换 mock Agent，但保持 schema 和 pipeline 接口稳定。

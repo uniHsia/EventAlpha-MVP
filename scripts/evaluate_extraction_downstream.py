@@ -86,6 +86,18 @@ def summarize_downstream_results(cases: list[dict]) -> dict:
         "trigger_alert_changed_count": sum(
             case["metrics"]["trigger_alert_changed"] for case in successful
         ),
+        "missed_alert_count": sum(
+            case["metrics"].get("missed_alert", False) for case in successful
+        ),
+        "over_alert_count": sum(
+            case["metrics"].get("over_alert", False) for case in successful
+        ),
+        "gold_event_level_mismatch_count": sum(
+            case["metrics"].get("gold_event_level_mismatch", False) for case in successful
+        ),
+        "gold_trigger_alert_mismatch_count": sum(
+            case["metrics"].get("gold_trigger_alert_mismatch", False) for case in successful
+        ),
         "mapped_asset_overlap_avg": round(
             mean([case["metrics"]["mapped_asset_overlap"] for case in successful])
             if successful
@@ -155,6 +167,11 @@ def _compare_outputs(case: dict, rule_result: dict, llm_result: dict) -> dict:
     llm_assets = _mapped_asset_names(llm_result)
     overlap = _overlap(rule_assets, llm_assets)
     impact_delta = abs(llm_score.impact_score - rule_score.impact_score)
+    gold = case["gold"]
+    missed_alert = bool(gold["expected_trigger_alert"] and not llm_score.trigger_alert)
+    over_alert = bool((not gold["expected_trigger_alert"]) and llm_score.trigger_alert)
+    gold_event_level_mismatch = llm_score.event_level != gold["expected_event_level"]
+    gold_trigger_alert_mismatch = llm_score.trigger_alert != gold["expected_trigger_alert"]
     severe = _is_severe_regression(
         case=case,
         rule_result=rule_result,
@@ -165,6 +182,10 @@ def _compare_outputs(case: dict, rule_result: dict, llm_result: dict) -> dict:
     return {
         "event_level_changed": rule_score.event_level != llm_score.event_level,
         "trigger_alert_changed": rule_score.trigger_alert != llm_score.trigger_alert,
+        "missed_alert": missed_alert,
+        "over_alert": over_alert,
+        "gold_event_level_mismatch": gold_event_level_mismatch,
+        "gold_trigger_alert_mismatch": gold_trigger_alert_mismatch,
         "mapped_asset_overlap": overlap,
         "impact_score_delta": impact_delta,
         "severe_downstream_regression": severe,
@@ -215,6 +236,10 @@ def _empty_metrics() -> dict:
     return {
         "event_level_changed": False,
         "trigger_alert_changed": False,
+        "missed_alert": False,
+        "over_alert": False,
+        "gold_event_level_mismatch": False,
+        "gold_trigger_alert_mismatch": False,
         "mapped_asset_overlap": 0.0,
         "impact_score_delta": 0,
         "severe_downstream_regression": True,
@@ -268,6 +293,16 @@ def _print_report(report: dict) -> None:
         print(f"{case['case_id']}: {case['title']}")
         print(f"  event_level_changed: {case['metrics']['event_level_changed']}")
         print(f"  trigger_alert_changed: {case['metrics']['trigger_alert_changed']}")
+        print(f"  missed_alert: {case['metrics'].get('missed_alert', False)}")
+        print(f"  over_alert: {case['metrics'].get('over_alert', False)}")
+        print(
+            "  gold_event_level_mismatch: "
+            f"{case['metrics'].get('gold_event_level_mismatch', False)}"
+        )
+        print(
+            "  gold_trigger_alert_mismatch: "
+            f"{case['metrics'].get('gold_trigger_alert_mismatch', False)}"
+        )
         print(f"  mapped_asset_overlap: {case['metrics']['mapped_asset_overlap']}")
         print(f"  impact_score_delta: {case['metrics']['impact_score_delta']}")
         print(f"  severe_downstream_regression: {case['metrics']['severe_downstream_regression']}")
@@ -315,4 +350,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-

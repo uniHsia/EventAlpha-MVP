@@ -24,6 +24,17 @@ def score_event(event: StructuredEvent, verification: EventVerification) -> Impa
     scope = 10 if len(event.affected_industries) >= 3 else 5
 
     total = min(100, credibility + event_weight + novelty + tradability + scope)
+    score_breakdown = {
+        "credibility": credibility,
+        "event_type": event_weight,
+        "novelty": novelty,
+        "tradability": tradability,
+        "scope": scope,
+    }
+    if _requires_trade_tariff_alert_floor(event) and total < 70:
+        score_breakdown["trade_tariff_alert_floor"] = 70 - total
+        total = 70
+
     if total >= 85:
         level = "S"
         tracking_mode = "urgent"
@@ -46,11 +57,28 @@ def score_event(event: StructuredEvent, verification: EventVerification) -> Impa
         event_level=level,
         trigger_alert=level in {"S", "A"},
         tracking_mode=tracking_mode,
-        score_breakdown={
-            "credibility": credibility,
-            "event_type": event_weight,
-            "novelty": novelty,
-            "tradability": tradability,
-            "scope": scope,
-        },
+        score_breakdown=score_breakdown,
     )
+
+
+def _requires_trade_tariff_alert_floor(event: StructuredEvent) -> bool:
+    """Force announced tariff escalation events to at least level A."""
+    if event.event_type != "trade_tariff" or event.status != "announced":
+        return False
+    text = " ".join(
+        [
+            event.event_title,
+            event.summary,
+            *event.entities,
+            *event.affected_industries,
+            *event.affected_assets_hint,
+        ]
+    )
+    tariff_escalation_keywords = [
+        "加征关税",
+        "关税上调",
+        "进口商品",
+        "贸易壁垒",
+        "提高关税",
+    ]
+    return any(keyword in text for keyword in tariff_escalation_keywords)

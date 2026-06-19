@@ -136,6 +136,14 @@ def summarize_gold_results(cases: list[dict]) -> dict:
         "postprocess_warning_count": sum(len(case["postprocess_warnings"]) for case in successful),
         "failed_case_count": total - len(successful),
         "severe_downstream_regression_count": 0,
+        "entity_recall_by_case": {
+            case["case_id"]: case["metrics"]["entity_recall"] for case in successful
+        },
+        "industry_overlap_by_case": {
+            case["case_id"]: case["metrics"]["industry_overlap"] for case in successful
+        },
+        "worst_entity_cases": _worst_cases(successful, "entity_recall"),
+        "worst_industry_cases": _worst_cases(successful, "industry_overlap"),
     }
     return summary
 
@@ -221,6 +229,19 @@ def _avg(cases: list[dict], metric: str) -> float:
     return round(mean([case["metrics"][metric] for case in cases]) if cases else 0.0, 4)
 
 
+def _worst_cases(cases: list[dict], metric: str, limit: int = 5) -> list[dict]:
+    """Return the lowest-scoring cases for a metric."""
+    ranked = sorted(cases, key=lambda case: case["metrics"][metric])
+    return [
+        {
+            "case_id": case["case_id"],
+            "title": case["title"],
+            metric: case["metrics"][metric],
+        }
+        for case in ranked[:limit]
+    ]
+
+
 def _recall(gold_values: list[str], actual_values: list[str]) -> float:
     gold = {_norm(item) for item in gold_values if item}
     actual = {_norm(item) for item in actual_values if item}
@@ -259,6 +280,16 @@ def _render_markdown_report(report: dict) -> str:
     ]
     for key, value in report["summary"].items():
         lines.append(f"- `{key}`: {value}")
+    lines.extend(["", "## Worst Entity Recall Cases", ""])
+    for item in report["summary"].get("worst_entity_cases", []):
+        lines.append(
+            f"- `{item['case_id']}`: {item['entity_recall']} - {item['title']}"
+        )
+    lines.extend(["", "## Worst Industry Overlap Cases", ""])
+    for item in report["summary"].get("worst_industry_cases", []):
+        lines.append(
+            f"- `{item['case_id']}`: {item['industry_overlap']} - {item['title']}"
+        )
     lines.extend(["", "## Cases", ""])
     for case in report["cases"]:
         lines.append(f"### {case['case_id']}: {case['title']}")
@@ -326,4 +357,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-

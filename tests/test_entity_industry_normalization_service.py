@@ -11,6 +11,10 @@ def test_entity_normalization_aliases() -> None:
 
     assert service.normalize_entity_name("央行") == "中国人民银行"
     assert service.normalize_entity_name("AI芯片") == "AI 芯片"
+    assert service.normalize_entity_name("原油价格") == "原油"
+    assert service.normalize_entity_name("避险资产") == "黄金"
+    assert service.normalize_entity_name("加征关税") == "关税"
+    assert service.normalize_entity_name("强震") == "地震"
 
 
 def test_entity_unknown_preserved() -> None:
@@ -27,7 +31,10 @@ def test_industry_normalization_aliases() -> None:
 
     assert service.normalize_industry_name("石油") == "能源"
     assert service.normalize_industry_name("原油") == "能源"
+    assert service.normalize_industry_name("石油天然气") == "能源"
     assert service.normalize_industry_name("黄金") == "贵金属"
+    assert service.normalize_industry_name("美元") == "汇率"
+    assert service.normalize_industry_name("成长风格") == "权益市场"
 
 
 def test_industry_unknown_preserved() -> None:
@@ -36,4 +43,3 @@ def test_industry_unknown_preserved() -> None:
 
     assert service.normalize_industry_list(["未知行业"]) == ["未知行业"]
     assert service.warnings == ["Unknown industry alias preserved: 未知行业"]
-

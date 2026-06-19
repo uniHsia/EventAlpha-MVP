@@ -12,6 +12,7 @@ from eventalpha.schemas import EventType, RawNews, StructuredEvent
 from eventalpha.schemas.base import new_id, utc_now
 from eventalpha.services import (
     AssetNormalizationService,
+    EntityKeywordCompletionService,
     EntityNormalizationService,
     IndustryNormalizationService,
     NoveltyCalibrationService,
@@ -45,6 +46,7 @@ class LLMExtractionAgent:
         fallback_agent=None,
         failure_mode: FailureMode = "strict",
         asset_normalizer: AssetNormalizationService | None = None,
+        entity_keyword_completer: EntityKeywordCompletionService | None = None,
         entity_normalizer: EntityNormalizationService | None = None,
         industry_normalizer: IndustryNormalizationService | None = None,
         status_calibrator: StatusCalibrationService | None = None,
@@ -58,6 +60,7 @@ class LLMExtractionAgent:
         self.fallback_agent = fallback_agent or RuleBasedExtractionAgent()
         self.failure_mode = failure_mode
         self.asset_normalizer = asset_normalizer or AssetNormalizationService()
+        self.entity_keyword_completer = entity_keyword_completer or EntityKeywordCompletionService()
         self.entity_normalizer = entity_normalizer or EntityNormalizationService()
         self.industry_normalizer = industry_normalizer or IndustryNormalizationService()
         self.status_calibrator = status_calibrator or StatusCalibrationService()
@@ -96,7 +99,7 @@ class LLMExtractionAgent:
             )
         self.warnings.extend(self.asset_normalizer.warnings)
 
-        entities = self._complete_entities(event.entities, raw_news)
+        entities = self._complete_entities(event.entities, raw_news, event.event_type)
         if entities != event.entities:
             added = [item for item in entities if self._norm(item) not in {self._norm(x) for x in event.entities}]
             self.warnings.append(f"completed entities from raw text: {added}")
@@ -170,7 +173,12 @@ class LLMExtractionAgent:
             }
         )
 
-    def _complete_entities(self, entities: list[str], raw_news: RawNews) -> list[str]:
+    def _complete_entities(
+        self,
+        entities: list[str],
+        raw_news: RawNews,
+        event_type: str,
+    ) -> list[str]:
         text = f"{raw_news.title} {raw_news.raw_text}"
         completed = list(entities)
         seen = {self._norm(item) for item in completed}
@@ -180,6 +188,13 @@ class LLMExtractionAgent:
             if any(alias in text for alias in aliases):
                 completed.append(canonical)
                 seen.add(self._norm(canonical))
+        completed = self.entity_keyword_completer.complete_entities(
+            event_type=event_type,
+            existing_entities=completed,
+            raw_title=raw_news.title,
+            raw_text=raw_news.raw_text,
+        )
+        self.warnings.extend(self.entity_keyword_completer.warnings)
         return completed
 
     def _event_time_is_explicit(self, event_time, raw_news: RawNews) -> bool:
