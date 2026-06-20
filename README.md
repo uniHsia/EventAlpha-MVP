@@ -218,6 +218,44 @@ python scripts/evaluate_llm_causal_reasoning.py
 python scripts/evaluate_llm_causal_reasoning.py --real-llm --write-report
 ```
 
+Run optional LLM anti-spurious critic without replacing the default pipeline:
+
+```bash
+python scripts/run_llm_anti_spurious_pipeline.py
+python scripts/run_llm_anti_spurious_pipeline.py --real-llm --failure-mode fallback
+python scripts/evaluate_llm_anti_spurious.py
+python scripts/evaluate_llm_anti_spurious.py --real-llm --write-report
+```
+
+## Phase 3D.5 Anti-Spurious Calibration
+
+Phase 3D.5 keeps the default rule-based pipeline unchanged, but makes the optional LLM anti-spurious critic more usable for downstream event cards and future news flow.
+
+- Add LLM-only anti-spurious risk calibration so direct, credible, short-chain events can fall to `low` risk when they meet conservative downgrade criteria.
+- Keep rumor, weak-verification, warning-heavy, second-order, and too-far-mapping cases from becoming overconfident.
+- Compress anti-spurious `issues` and `required_verifications` to the most important 3-5 items.
+- Compact EventCard `risk_factors` and `verification_indicators` so cards stay readable.
+- Extend evaluation with calibration counts, post-compression counts, and EventCard-length metrics.
+
+Offline defaults remain:
+
+```bash
+python scripts/run_demo_event.py
+python scripts/run_llm_anti_spurious_pipeline.py
+python scripts/evaluate_llm_anti_spurious.py
+pytest
+```
+
+Manual real DeepSeek / OpenAI-compatible recheck:
+
+```bash
+python scripts/run_llm_anti_spurious_pipeline.py --real-llm --failure-mode fallback
+python scripts/run_llm_anti_spurious_pipeline.py --real-llm --use-llm-extraction --use-llm-causal --failure-mode fallback
+python scripts/evaluate_llm_anti_spurious.py --real-llm --write-report
+```
+
+See `docs/phase3d5_anti_spurious_calibration.md` for the detailed calibration rules, critique compression policy, EventCard compaction behavior, and evaluation metrics.
+
 ## 后续路线
 
 1. 用真实 LLM 替换 mock Agent，但保持 schema 和 pipeline 接口稳定。

@@ -28,6 +28,7 @@ class MockLLMClient:
         responses: dict[str, dict[str, Any] | str] | None = None,
         fail_first: bool = False,
     ) -> None:
+        self._uses_default_responses = responses is None
         self.responses = self.default_responses() if responses is None else responses
         self.fail_first = fail_first
         self.call_counts: dict[str, int] = {}
@@ -49,6 +50,8 @@ class MockLLMClient:
         self.call_counts[name] = self.call_counts.get(name, 0) + 1
         if self.fail_first and self.call_counts[name] == 1:
             raw_output: dict[str, Any] | str = "{not valid json"
+        elif self._uses_default_responses and name == "AntiSpuriousCheck":
+            raw_output = self._default_anti_spurious_response(prompt)
         else:
             configured = self.responses[name]
             raw_output = deepcopy(configured) if isinstance(configured, dict) else configured
@@ -103,3 +106,50 @@ class MockLLMClient:
             "CausalChain": json.loads(json.dumps(chain, ensure_ascii=False)),
             "AntiSpuriousCheck": json.loads(json.dumps(check, ensure_ascii=False)),
         }
+
+    @staticmethod
+    def _default_anti_spurious_response(prompt: str) -> dict[str, Any]:
+        """Return a slightly more case-aware offline anti-spurious critique."""
+        lowered = prompt.casefold()
+
+        if '"status": "rumor"' in lowered or '"verification_status": "rumor"' in lowered:
+            check = AntiSpuriousCheck(
+                event_id="EVT_MOCK_LLM",
+                chain_id="CHAIN_MOCK_LLM",
+                spurious_risk="medium",
+                issues=["Rumor cases still need official confirmation before conviction."],
+                required_verifications=["Check the official filing or regulator notice."],
+                adjusted_confidence=0.52,
+            )
+        elif "second_order_watch" in lowered or '"event_type": "earthquake_supply_chain"' in lowered:
+            check = AntiSpuriousCheck(
+                event_id="EVT_MOCK_LLM",
+                chain_id="CHAIN_MOCK_LLM",
+                spurious_risk="medium",
+                issues=["Second-order watch assets still need more evidence."],
+                required_verifications=["Check orders, bidding, or capex confirmation."],
+                adjusted_confidence=0.61,
+            )
+        elif '"event_type": "rate_policy"' in lowered:
+            check = AntiSpuriousCheck(
+                event_id="EVT_MOCK_LLM",
+                chain_id="CHAIN_MOCK_LLM",
+                spurious_risk="medium",
+                issues=["The market may already have priced in part of the policy move."],
+                required_verifications=["Check the yield curve, FX, and policy wording."],
+                adjusted_confidence=0.58,
+            )
+        else:
+            check = AntiSpuriousCheck(
+                event_id="EVT_MOCK_LLM",
+                chain_id="CHAIN_MOCK_LLM",
+                spurious_risk="medium",
+                issues=["Follow up with direct market confirmation data."],
+                required_verifications=["Check spot price, inventory, or shipment confirmation."],
+                adjusted_confidence=0.61,
+            )
+
+        payload = check.model_dump(mode="json")
+        if payload.get("created_at"):
+            payload["created_at"] = str(payload["created_at"])
+        return json.loads(json.dumps(payload, ensure_ascii=False))

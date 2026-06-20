@@ -5,10 +5,10 @@ from __future__ import annotations
 from typing import Any
 
 from eventalpha.agents import (
-    check_spurious_reasoning,
     generate_causal_chain,
     generate_event_card,
     map_event_to_markets,
+    RuleBasedAntiSpuriousAgent,
     RuleBasedCausalReasoningAgent,
     RuleBasedExtractionAgent,
     score_event,
@@ -24,6 +24,7 @@ def run_event_pipeline(
     persist: bool = True,
     extraction_agent=None,
     causal_agent=None,
+    anti_spurious_agent=None,
 ) -> dict[str, Any]:
     """Run the MVP event-analysis pipeline for one raw news item."""
     ledger = ledger_service or LedgerService()
@@ -42,8 +43,19 @@ def run_event_pipeline(
         extraction_warnings=extraction_warnings,
     )
     causal_warnings = list(getattr(causal_reasoner, "warnings", []))
-    anti_spurious = check_spurious_reasoning(event, causal_chain)
     market_mapping = map_event_to_markets(event, causal_chain)
+    anti_spurious_checker = anti_spurious_agent or RuleBasedAntiSpuriousAgent()
+    anti_spurious = anti_spurious_checker.check(
+        structured_event=event,
+        causal_chain=causal_chain,
+        verification=verification,
+        impact_score=score,
+        market_mapping=market_mapping,
+        extraction_warnings=extraction_warnings,
+        causal_warnings=causal_warnings,
+        supported_assets=event.affected_assets_hint,
+    )
+    anti_spurious_warnings = list(getattr(anti_spurious_checker, "warnings", []))
     event_card = generate_event_card(
         raw_news,
         event,
@@ -84,6 +96,7 @@ def run_event_pipeline(
         "causal_chain": causal_chain,
         "causal_warnings": causal_warnings,
         "anti_spurious_check": anti_spurious,
+        "anti_spurious_warnings": anti_spurious_warnings,
         "market_mapping": market_mapping,
         "event_card": event_card,
         "prediction_ledger_entry": prediction,

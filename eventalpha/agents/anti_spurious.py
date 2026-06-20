@@ -44,3 +44,24 @@ def check_spurious_reasoning(event: StructuredEvent, chain: CausalChain) -> Anti
         required_verifications=required,
         adjusted_confidence=adjusted,
     )
+
+
+class RuleBasedAntiSpuriousAgent:
+    """Thin wrapper around the deterministic anti-spurious checker."""
+
+    warnings: list[str] = []
+
+    def check(
+        self,
+        structured_event: StructuredEvent,
+        causal_chain: CausalChain,
+        verification=None,
+        impact_score=None,
+        market_mapping=None,
+        extraction_warnings: list[str] | None = None,
+        causal_warnings: list[str] | None = None,
+        supported_assets: list[str] | None = None,
+    ) -> AntiSpuriousCheck:
+        """Run the existing rule-based anti-spurious check."""
+        self.warnings = []
+        return check_spurious_reasoning(structured_event, causal_chain)
