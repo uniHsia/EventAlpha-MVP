@@ -375,9 +375,25 @@ python scripts/run_historical_analogy_demo.py
 python scripts/run_historical_analogy_demo.py --query "AI chip export control"
 python scripts/run_historical_analogy_demo.py --event-type ai_export_control
 python scripts/run_historical_analogy_demo.py --asset "AI chips"
+python scripts/run_historical_analogy_demo.py --demo-current-ai-export
+python scripts/run_historical_analogy_demo.py --from-active-event 1
 ```
 
-Historical analogies are research aids only; seed outcomes are illustrative examples, not verified market returns. See `docs/phase5b_historical_analogy_retrieval.md` for scoring dimensions, explanation behavior, demo usage, and future Phase 5C expansion.
+Historical analogies are research aids only; seed outcomes are illustrative examples, not verified market returns. Phase 5B.1 adds strength labels, input-context diagnostics, low-score explanations, and event-family-specific verification suggestions. See `docs/phase5b_historical_analogy_retrieval.md` and `docs/phase5b1_analogy_context_calibration.md` for scoring dimensions, explanation behavior, demo usage, and future Phase 5C expansion.
+
+## Phase 5C Historical Outcome Comparison
+
+Phase 5C compares historical case outcome windows with current review or market-return results. It is a deterministic offline helper, not a full event study, and it keeps `manual_seed_demo` outcomes clearly marked as illustrative examples rather than verified backtests.
+
+Run the historical outcome comparison demo:
+
+```bash
+python scripts/run_historical_outcome_comparison_demo.py
+python scripts/run_historical_outcome_comparison_demo.py --demo-current-ai-export
+python scripts/run_historical_outcome_comparison_demo.py --demo-current-ai-export --with-mock-current-outcome
+```
+
+See `docs/phase5c_historical_outcome_comparison.md` for schemas, comparison statuses, mock current outcome usage, and future real ReviewResult/MarketReturn integration.
 
 ## 后续路线
 

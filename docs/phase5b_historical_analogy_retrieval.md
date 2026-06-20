@@ -4,6 +4,8 @@ Phase 5B builds on the Phase 5A Historical Case Store. Phase 5A can find related
 
 This phase is fully offline. It does not use LLMs, embeddings, vector databases, RAG, scheduling, UI, trading, or ledger schema changes.
 
+Phase 5B.1 adds context-completeness diagnostics, strength labels, low-score explanations, event-family-specific verification suggestions, and richer demo inputs. See `docs/phase5b1_analogy_context_calibration.md`.
+
 ## HistoricalAnalogy Schema
 
 `AnalogyDimensionScore` stores a score for one similarity dimension:
@@ -72,6 +74,8 @@ python scripts/run_historical_analogy_demo.py
 python scripts/run_historical_analogy_demo.py --query "AI chip export control"
 python scripts/run_historical_analogy_demo.py --event-type ai_export_control
 python scripts/run_historical_analogy_demo.py --asset "AI chips"
+python scripts/run_historical_analogy_demo.py --demo-current-ai-export
+python scripts/run_historical_analogy_demo.py --from-active-event 1
 ```
 
 If `data/historical_cases.json` exists, the demo reads it. Otherwise it uses in-memory MVP seed cases.

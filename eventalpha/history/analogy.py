@@ -17,6 +17,33 @@ def make_analogy_id(current_event_title: str | None, historical_case_id: str) ->
     return f"ANALOGY_{digest}"
 
 
+def analogy_strength_label(score: float) -> str:
+    """Map an analogy score to a human-readable strength label."""
+    if score >= 0.60:
+        return "strong"
+    if score >= 0.35:
+        return "moderate"
+    if score >= 0.15:
+        return "weak"
+    return "surface_only"
+
+
+class AnalogyInputContext(EventAlphaModel):
+    """Diagnostic summary of how much current-event context was provided."""
+
+    provided_dimensions: list[str] = Field(default_factory=list)
+    missing_dimensions: list[str] = Field(default_factory=list)
+    context_completeness_score: float = 0.0
+    context_label: str = "partial"
+    low_context_warning: str | None = None
+
+    @field_validator("context_completeness_score")
+    @classmethod
+    def clamp_context_score(cls, value: float) -> float:
+        """Clamp context completeness into 0..1."""
+        return round(min(max(float(value), 0.0), 1.0), 4)
+
+
 class AnalogyDimensionScore(EventAlphaModel):
     """Score for one analogy dimension."""
 
@@ -40,6 +67,9 @@ class HistoricalAnalogy(EventAlphaModel):
     historical_case_id: str
     historical_case_title: str
     overall_score: float
+    strength_label: str = ""
+    input_context: AnalogyInputContext | None = None
+    low_score_explanation: str | None = None
     dimension_scores: list[AnalogyDimensionScore] = Field(default_factory=list)
     similarities: list[str] = Field(default_factory=list)
     differences: list[str] = Field(default_factory=list)
@@ -59,6 +89,10 @@ class HistoricalAnalogy(EventAlphaModel):
         """Fill stable ID when omitted."""
         if not self.analogy_id:
             self.analogy_id = make_analogy_id(self.current_event_title, self.historical_case_id)
+        if not self.strength_label:
+            self.strength_label = analogy_strength_label(self.overall_score)
+        if not self.low_score_explanation and self.input_context and self.input_context.low_context_warning:
+            self.low_score_explanation = self.input_context.low_context_warning
         return self
 
 

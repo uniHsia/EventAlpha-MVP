@@ -8,7 +8,7 @@ from collections.abc import Iterable
 from eventalpha.news import TrackedEvent
 from eventalpha.schemas import StructuredEvent
 
-from .analogy import AnalogyDimensionScore, HistoricalAnalogy
+from .analogy import AnalogyDimensionScore, AnalogyInputContext, HistoricalAnalogy
 from .schemas import HistoricalCase
 
 
@@ -22,6 +22,9 @@ DIMENSION_WEIGHTS = {
     "query_keywords": 0.10,
     "region": 0.04,
 }
+
+CONTEXT_DIMENSIONS = tuple(DIMENSION_WEIGHTS.keys())
+LOW_CONTEXT_WARNING = "Low score mainly reflects limited input context, not necessarily an irrelevant case."
 
 
 class HistoricalAnalogyRetriever:
@@ -44,6 +47,16 @@ class HistoricalAnalogyRetriever:
     ) -> list[HistoricalAnalogy]:
         """Return top historical analogies."""
         current_title = query or event_type or "current event"
+        input_context = build_input_context(
+            query=query,
+            event_type=event_type,
+            assets=assets,
+            entities=entities,
+            industries=industries,
+            tags=tags,
+            region=region,
+            causal_chain=causal_chain,
+        )
         analogies = [
             self._build_analogy(
                 historical_case,
@@ -56,6 +69,7 @@ class HistoricalAnalogyRetriever:
                 tags=tags or [],
                 region=region,
                 causal_chain=causal_chain or [],
+                input_context=input_context,
             )
             for historical_case in self.cases
         ]
@@ -75,6 +89,7 @@ class HistoricalAnalogyRetriever:
         tags: list[str],
         region: str | None,
         causal_chain: list[str],
+        input_context: AnalogyInputContext,
     ) -> HistoricalAnalogy:
         dimension_scores = [
             _exact_dimension("event_type", event_type, historical_case.event_type),
@@ -91,13 +106,18 @@ class HistoricalAnalogyRetriever:
         differences = _differences(dimension_scores, historical_case, event_type, region)
         transferable_lessons = _transferable_lessons(historical_case)
         non_transferable_lessons = _non_transferable_lessons(historical_case)
-        verification_suggestions = _verification_suggestions(dimension_scores, historical_case)
+        verification_suggestions = _verification_suggestions(
+            historical_case=historical_case,
+            current_event_type=event_type,
+        )
         risk_notes = _risk_notes(historical_case)
         return HistoricalAnalogy(
             current_event_title=current_event_title,
             historical_case_id=historical_case.case_id,
             historical_case_title=historical_case.title,
             overall_score=overall,
+            input_context=input_context,
+            low_score_explanation=input_context.low_context_warning if overall < 0.35 else None,
             dimension_scores=dimension_scores,
             similarities=similarities,
             differences=differences,
@@ -149,6 +169,71 @@ def retrieve_analogies_for_tracked_event(
         causal_chain=event.latest_claims,
         limit=limit,
     )
+
+
+def build_input_context(
+    query: str | None = None,
+    event_type: str | None = None,
+    assets: list[str] | None = None,
+    entities: list[str] | None = None,
+    industries: list[str] | None = None,
+    tags: list[str] | None = None,
+    region: str | None = None,
+    causal_chain: list[str] | None = None,
+) -> AnalogyInputContext:
+    """Build a context-completeness diagnostic for an analogy request."""
+    values_by_dimension = {
+        "event_type": event_type,
+        "affected_assets": assets,
+        "entities": entities,
+        "industries": industries,
+        "tags": tags,
+        "causal_chain": causal_chain,
+        "query_keywords": query,
+        "region": region,
+    }
+    provided = [
+        dimension
+        for dimension, value in values_by_dimension.items()
+        if _has_context_value(value)
+    ]
+    missing = [dimension for dimension in CONTEXT_DIMENSIONS if dimension not in provided]
+    completeness = len(provided) / len(CONTEXT_DIMENSIONS)
+    if provided == ["query_keywords"]:
+        label = "query-only"
+    elif len(provided) >= 4:
+        label = "multi-dimensional"
+    else:
+        label = "partial"
+    warning = LOW_CONTEXT_WARNING if label == "query-only" or completeness < 0.25 else None
+    return AnalogyInputContext(
+        provided_dimensions=provided,
+        missing_dimensions=missing,
+        context_completeness_score=completeness,
+        context_label=label,
+        low_context_warning=warning,
+    )
+
+
+def build_demo_current_ai_export_context() -> dict[str, object]:
+    """Return a richer current-event context for the AI export-control demo."""
+    return {
+        "query": "AI chip export control",
+        "event_type": "ai_export_control",
+        "assets": [
+            "AI chips",
+            "semiconductor equipment",
+            "domestic semiconductor substitutes",
+        ],
+        "entities": ["US", "China", "GPU", "AI chips"],
+        "industries": ["semiconductor", "AI infrastructure"],
+        "tags": ["export_control", "semiconductor", "AI"],
+        "causal_chain": [
+            "export controls restrict advanced GPU supply",
+            "domestic substitutes receive attention",
+            "second-order equipment and EDA mapping requires verification",
+        ],
+    }
 
 
 def _exact_dimension(dimension: str, current: str | None, historical: str | None) -> AnalogyDimensionScore:
@@ -264,21 +349,47 @@ def _non_transferable_lessons(historical_case: HistoricalCase) -> list[str]:
 
 
 def _verification_suggestions(
-    dimension_scores: list[AnalogyDimensionScore],
     historical_case: HistoricalCase,
+    current_event_type: str | None = None,
 ) -> list[str]:
     suggestions = [
         "Check official announcements and primary policy documents.",
         "Verify whether the market reaction was already priced in.",
     ]
-    matched_terms = {term for score in dimension_scores for term in score.matched_terms}
-    case_text = " ".join([historical_case.title, historical_case.summary, " ".join(historical_case.tags)]).casefold()
-    if {"ai", "chip", "gpu", "semiconductor"} & matched_terms or "chip" in case_text:
-        suggestions.append("Check GPU orders, cloud capex, export-control details, and semiconductor supply-chain indicators.")
-    if {"oil", "shipping", "red"} & matched_terms or "oil" in case_text or "shipping" in case_text:
-        suggestions.append("Check supply disruption evidence, shipping rerouting, inventory, and freight-rate indicators.")
-    if "rate" in case_text or "central" in case_text:
-        suggestions.append("Check central-bank guidance, yield curve moves, FX reaction, and macro data confirmation.")
+    family = _event_family(current_event_type, historical_case)
+    if family == "ai_export_control":
+        suggestions.extend(
+            [
+                "Check export-control rules, licensing scope, and official implementation timeline.",
+                "Verify GPU orders, cloud capex, semiconductor supply-chain exposure, domestic substitutes, and second-order equipment or EDA mapping.",
+            ]
+        )
+    elif family == "rate_policy":
+        suggestions.extend(
+            [
+                "Check central-bank statements, yield curve moves, FX reaction, inflation data, employment data, and expected policy path.",
+            ]
+        )
+    elif family == "geopolitical_oil":
+        suggestions.extend(
+            [
+                "Check oil inventories, shipping rerouting, production disruption, freight rates, and risk premium indicators.",
+            ]
+        )
+    elif family == "trade_tariff":
+        suggestions.extend(
+            [
+                "Check tariff lists, retaliation measures, importer/exporter exposure, cost pass-through, and alternative supply chains.",
+            ]
+        )
+    elif family in {"cloud_ai_capex", "technology_breakthrough"}:
+        suggestions.extend(
+            [
+                "Check capex guidance, order backlog, GPU supply, data-center power demand, networking constraints, and cooling constraints.",
+            ]
+        )
+    else:
+        suggestions.append("Check the key market indicators most directly tied to this event family.")
     return _unique(suggestions)[:6]
 
 
@@ -291,6 +402,46 @@ def _risk_notes(historical_case: HistoricalCase) -> list[str]:
 
 def _tokens_from_values(values: list[str]) -> set[str]:
     return set().union(*(_tokens(value) for value in values)) if values else set()
+
+
+def _event_family(current_event_type: str | None, historical_case: HistoricalCase) -> str:
+    event_type = _normalize(current_event_type or historical_case.event_type)
+    case_text = _normalize(
+        " ".join(
+            [
+                historical_case.title,
+                historical_case.summary,
+                historical_case.event_type,
+                " ".join(historical_case.tags),
+                " ".join(historical_case.affected_assets),
+            ]
+        )
+    )
+    if event_type in {"ai_export_control", "rate_policy", "trade_tariff", "cloud_ai_capex", "technology_breakthrough"}:
+        return event_type
+    if event_type == "geopolitical_conflict" and any(
+        marker in case_text for marker in ["oil", "shipping", "red sea", "crude", "supply"]
+    ):
+        return "geopolitical_oil"
+    if any(marker in case_text for marker in ["export control", "gpu", "semiconductor", "ai chip"]):
+        return "ai_export_control"
+    if any(marker in case_text for marker in ["central bank", "rate", "fed", "yield curve", "fx"]):
+        return "rate_policy"
+    if any(marker in case_text for marker in ["tariff", "trade", "retaliation"]):
+        return "trade_tariff"
+    if any(marker in case_text for marker in ["oil", "shipping", "red sea"]):
+        return "geopolitical_oil"
+    return event_type or "unknown"
+
+
+def _has_context_value(value: object) -> bool:
+    if value is None:
+        return False
+    if isinstance(value, str):
+        return bool(value.strip())
+    if isinstance(value, list):
+        return any(str(item).strip() for item in value)
+    return bool(value)
 
 
 def _tokens(value: str) -> set[str]:
