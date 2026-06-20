@@ -84,6 +84,32 @@ def test_rss_provider_records_empty_result_when_query_terms_do_not_match(tmp_pat
     assert result.errors == ["RSS query matched no items."]
 
 
+def test_rss_provider_extracts_google_news_publisher_and_cleans_summary(tmp_path) -> None:
+    """Google News RSS entries should expose publisher sources and clean HTML."""
+    fixture = tmp_path / "google_news.xml"
+    fixture.write_text(
+        """<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0">
+  <channel>
+    <title>"AI chip export control" - Google News</title>
+    <item>
+      <title>AI chip export control update - Reuters</title>
+      <description>&lt;a href="https://example.com"&gt;AI chip story&lt;/a&gt;&amp;nbsp;with details.</description>
+    </item>
+  </channel>
+</rss>
+""",
+        encoding="utf-8",
+    )
+
+    result = RSSProvider(str(fixture), name="fixture").fetch(query="AI chip")
+
+    assert result.items[0].source == "Reuters"
+    assert result.items[0].summary == "AI chip story with details."
+    assert "<a" not in result.items[0].raw_text
+    assert "nbsp" not in result.items[0].raw_text
+
+
 def test_rss_provider_missing_feedparser_records_error(monkeypatch) -> None:
     """Missing optional RSS dependency should not break non-RSS news paths."""
     from eventalpha.news import rss_provider

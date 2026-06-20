@@ -277,6 +277,26 @@ python scripts/run_news_scout.py --real-fetch --query "AI chip export control" -
 
 Use `--source rss` to skip GDELT when the hosted API is rate-limited. Phase 4A does not add scheduling, UI, push notifications, historical news storage, trading, or ledger schema changes. See `docs/phase4a_news_source_collection.md` for provider behavior, dedup/filter rules, mock/real commands, and the non-investment-advice boundary.
 
+## Phase 4B Event Clustering
+
+Phase 4B clusters related `NewsItem` candidates into lightweight `EventCluster` objects, computes preliminary multi-source support, and can convert top clusters into `RawNews` for the existing EventAlpha pipeline. It does not use LLMs or vector databases for clustering and does not change ledger schema.
+
+Run the offline cluster scout:
+
+```bash
+python scripts/run_event_cluster_scout.py
+python scripts/run_event_cluster_scout.py --analyze-top 1
+```
+
+Run real RSS-only clustering when GDELT is rate-limited:
+
+```bash
+python scripts/run_event_cluster_scout.py --real-fetch --source rss --rss-feed "https://news.google.com/rss/search?q=AI%20chip%20export%20control&hl=en-US&gl=US&ceid=US:en" --query "AI chip export control" --limit 10
+python scripts/run_event_cluster_scout.py --real-fetch --source rss --rss-feed "https://news.google.com/rss/search?q=AI%20chip%20export%20control&hl=en-US&gl=US&ceid=US:en" --query "AI chip export control" --limit 10 --analyze-top 3 --use-llm-extraction --use-llm-causal --use-llm-anti-spurious --failure-mode fallback
+```
+
+See `docs/phase4b_event_clustering_verification.md` for clustering rules, verification status meanings, cluster-to-RawNews conversion, and the boundary between source support and final truth verification.
+
 ## 后续路线
 
 1. 用真实 LLM 替换 mock Agent，但保持 schema 和 pipeline 接口稳定。

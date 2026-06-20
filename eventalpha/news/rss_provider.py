@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import calendar
+import html
+import re
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -59,11 +61,11 @@ class RSSProvider:
             title = str(_entry_get(entry, "title", "")).strip()
             if not title:
                 continue
-            summary = str(
+            summary = _clean_text(str(
                 _entry_get(entry, "summary", _entry_get(entry, "description", ""))
-            ).strip() or None
+            )) or None
             link = str(_entry_get(entry, "link", "")).strip() or None
-            source = self._source_name(parsed)
+            source = self._entry_source(entry, parsed, title)
             items.append(
                 NewsItem(
                     title=title,
@@ -109,6 +111,17 @@ class RSSProvider:
         path_name = Path(str(self.feed_url)).stem
         return path_name or self.name
 
+    def _entry_source(self, entry: Any, parsed: Any, title: str) -> str:
+        entry_source = _entry_get(_entry_get(entry, "source", {}), "title", "")
+        if entry_source:
+            return str(entry_source)
+        feed_source = self._source_name(parsed)
+        if "google news" in feed_source.casefold():
+            publisher = _publisher_from_google_news_title(title)
+            if publisher:
+                return publisher
+        return feed_source
+
 
 def _load_feedparser() -> Any:
     """Import feedparser lazily so non-RSS providers can run without it."""
@@ -139,3 +152,18 @@ def _published_at(entry: Any) -> datetime | None:
 def _matches_query(item: NewsItem, query_text: str, query_terms: list[str]) -> bool:
     text = f"{item.title} {item.summary or ''}".casefold()
     return query_text in text or any(term in text for term in query_terms)
+
+
+def _clean_text(value: str) -> str:
+    text = html.unescape(value)
+    text = re.sub(r"<[^>]+>", " ", text)
+    return re.sub(r"\s+", " ", text).strip()
+
+
+def _publisher_from_google_news_title(title: str) -> str | None:
+    if " - " not in title:
+        return None
+    publisher = title.rsplit(" - ", 1)[1].strip()
+    if not publisher or len(publisher.split()) > 8:
+        return None
+    return publisher

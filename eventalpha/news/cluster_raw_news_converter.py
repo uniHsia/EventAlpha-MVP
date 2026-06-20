@@ -1,0 +1,67 @@
+"""Convert event clusters to EventAlpha RawNews."""
+
+from __future__ import annotations
+
+from eventalpha.schemas import RawNews
+
+from .schemas import EventCluster
+
+
+def event_cluster_to_raw_news(cluster: EventCluster) -> RawNews:
+    """Convert an EventCluster to RawNews without changing the RawNews schema."""
+    urls = [item.url for item in cluster.items if item.url]
+    item_ids = [item.news_id for item in cluster.items]
+    source_names = _unique(cluster.sources)[:5]
+    summaries = [
+        item.raw_text or item.summary
+        for item in cluster.items
+        if item.raw_text or item.summary
+    ]
+    raw_text = cluster.canonical_summary or "\n".join(str(item) for item in summaries[:3]) or cluster.canonical_title
+    metadata = {
+        "cluster_id": cluster.cluster_id,
+        "source_count": str(cluster.source_count),
+        "verification_status": cluster.verification_status,
+        "confidence": f"{cluster.confidence:.4f}",
+        "urls": "|".join(urls),
+        "item_ids": "|".join(item_ids),
+        "dominant_keywords": ",".join(cluster.dominant_keywords),
+    }
+
+    return RawNews(
+        raw_id=cluster.cluster_id,
+        title=cluster.canonical_title,
+        source=", ".join(source_names) or "news_cluster",
+        source_type=_cluster_source_type(cluster),
+        publish_time=cluster.last_seen_at or cluster.first_seen_at,
+        url=urls[0] if urls else None,
+        language=_cluster_language(cluster),
+        raw_text=raw_text,
+        metadata=metadata,
+    )
+
+
+def _cluster_source_type(cluster: EventCluster) -> str:
+    if cluster.verification_status == "analysis_only":
+        return "research_report"
+    if cluster.mainstream_source_count:
+        return "mainstream_media"
+    return "unknown"
+
+
+def _cluster_language(cluster: EventCluster) -> str:
+    for item in cluster.items:
+        if item.language:
+            return item.language
+    return "unknown"
+
+
+def _unique(values: list[str]) -> list[str]:
+    results: list[str] = []
+    seen: set[str] = set()
+    for value in values:
+        if not value or value in seen:
+            continue
+        seen.add(value)
+        results.append(value)
+    return results
