@@ -6,9 +6,9 @@ from eventalpha.schemas import RISK_DISCLAIMER
 from scripts.run_historical_case_demo import run_historical_case_demo
 
 
-def test_historical_case_demo_runs_offline() -> None:
+def test_historical_case_demo_runs_offline(tmp_path) -> None:
     """Default demo should use in-memory seed cases without network."""
-    result = run_historical_case_demo(limit=3)
+    result = run_historical_case_demo(limit=3, store_path=tmp_path / "missing_cases.json")
 
     assert result["used_seed_memory"] is True
     assert len(result["matches"]) == 3

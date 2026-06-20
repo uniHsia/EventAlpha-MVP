@@ -364,6 +364,21 @@ python scripts/run_historical_case_demo.py --event-type ai_export_control
 
 Seed outcomes are MVP illustrative examples, not verified market returns or investment advice. See `docs/phase5a_historical_case_store.md` for schema details, store/search behavior, current-event helper usage, and future Phase 5B/5C expansion paths.
 
+## Phase 5B Historical Analogy Retrieval
+
+Phase 5B explains historical analogies on top of the Phase 5A case store. It scores event type, assets, entities, industries, tags, causal-chain terms, query keywords, and region, then explains similarities, differences, transferable lessons, non-transferable lessons, verification suggestions, and risk notes. It remains offline and does not use LLMs, RAG, embeddings, or ledger schema changes.
+
+Run the historical analogy demo:
+
+```bash
+python scripts/run_historical_analogy_demo.py
+python scripts/run_historical_analogy_demo.py --query "AI chip export control"
+python scripts/run_historical_analogy_demo.py --event-type ai_export_control
+python scripts/run_historical_analogy_demo.py --asset "AI chips"
+```
+
+Historical analogies are research aids only; seed outcomes are illustrative examples, not verified market returns. See `docs/phase5b_historical_analogy_retrieval.md` for scoring dimensions, explanation behavior, demo usage, and future Phase 5C expansion.
+
 ## 后续路线
 
 1. 用真实 LLM 替换 mock Agent，但保持 schema 和 pipeline 接口稳定。
