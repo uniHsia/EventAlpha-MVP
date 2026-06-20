@@ -10,6 +10,17 @@ from .clustering import NewsClusterer
 from .dedup import NewsDedupResult, deduplicate_news
 from .filters import NewsFilterResult, NewsKeywordFilter
 from .gdelt_provider import GDELTProvider
+from .lifecycle import (
+    EventLifecycleUpdate,
+    EventMatchResult,
+    EventTimelineEntry,
+    TrackedEvent,
+    make_event_key,
+    make_tracked_event_id,
+)
+from .lifecycle_matching import EventLifecycleMatcher
+from .lifecycle_store import DEFAULT_LIFECYCLE_STORE_PATH, EventLifecycleStore
+from .lifecycle_update import EventLifecycleUpdater
 from .raw_news_converter import news_item_to_raw_news
 from .rss_provider import RSSProvider
 from .official_evidence import OfficialEvidenceHeuristic
@@ -37,6 +48,12 @@ __all__ = [
     "ClusterCredibilityService",
     "ClusterVerificationService",
     "EventCluster",
+    "EventLifecycleMatcher",
+    "EventLifecycleStore",
+    "EventLifecycleUpdate",
+    "EventLifecycleUpdater",
+    "EventMatchResult",
+    "EventTimelineEntry",
     "GDELTProvider",
     "NewsDedupResult",
     "NewsFetchResult",
@@ -50,12 +67,16 @@ __all__ = [
     "RSSProvider",
     "SourceCredibility",
     "SourceCredibilityRegistry",
+    "TrackedEvent",
+    "DEFAULT_LIFECYCLE_STORE_PATH",
     "build_mock_registry",
     "build_real_registry",
     "deduplicate_news",
     "event_cluster_to_raw_news",
     "make_claim_id",
     "make_cluster_id",
+    "make_event_key",
     "make_news_id",
+    "make_tracked_event_id",
     "news_item_to_raw_news",
 ]

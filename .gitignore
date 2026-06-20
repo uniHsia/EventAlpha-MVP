@@ -1,5 +1,6 @@
 data/cache/
 data/llm_traces/
+data/event_lifecycle_store.json
 reports/
 eventalpha_mvp.sqlite3
 .pytest_cache/

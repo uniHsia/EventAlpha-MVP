@@ -323,6 +323,32 @@ python scripts/run_event_cluster_scout.py --real-fetch --source rss --rss-feed "
 
 See `docs/phase4c_multi_source_credibility.md` for source credibility rules, claim extraction, claim consistency, official evidence heuristics, and the boundary between pre-verification and final truth verification.
 
+## Phase 4D Event Lifecycle Tracking
+
+Phase 4D tracks event lifecycle state across scout runs. It matches new clusters to existing tracked events, records timeline updates, detects source-count increases, credibility upgrades, official evidence, uncertainty, conflicts, stale events, and closed events. The store is a local JSON file and does not change ledger schema.
+
+Run offline lifecycle tracking:
+
+```bash
+python scripts/run_event_lifecycle_tracker.py --reset-store
+python scripts/run_event_lifecycle_tracker.py
+python scripts/run_event_lifecycle_tracker.py --list-active
+```
+
+Run real RSS lifecycle tracking:
+
+```bash
+python scripts/run_event_lifecycle_tracker.py --real-fetch --source rss --rss-feed "https://news.google.com/rss/search?q=AI%20chip%20export%20control&hl=en-US&gl=US&ceid=US:en" --query "AI chip export control" --limit 10
+```
+
+Optional local pipeline analysis for updated events:
+
+```bash
+python scripts/run_event_lifecycle_tracker.py --analyze-updated 1
+```
+
+See `docs/phase4d_event_lifecycle_tracking.md` for lifecycle stages, matching rules, JSON store behavior, mock/real commands, and the non-investment-advice boundary.
+
 ## 后续路线
 
 1. 用真实 LLM 替换 mock Agent，但保持 schema 和 pipeline 接口稳定。
