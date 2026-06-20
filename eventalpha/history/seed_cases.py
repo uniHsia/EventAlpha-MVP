@@ -19,6 +19,11 @@ def build_seed_historical_cases() -> list[HistoricalCase]:
             entities=["US Commerce Department", "China", "AI chip vendors"],
             industries=["semiconductors", "AI infrastructure"],
             affected_assets=["AI chips", "semiconductor equipment", "domestic semiconductor substitutes"],
+            asset_returns={
+                "AI chips": {"T+1": 0.012, "T+3": 0.028, "T+7": 0.015},
+                "semiconductor equipment": {"T+1": -0.004, "T+3": 0.006, "T+7": 0.003},
+                "domestic semiconductor substitutes": {"T+1": 0.018, "T+3": 0.035, "T+7": 0.022},
+            },
             tags=["export_control", "AI_chip", "semiconductor"],
             causal_chain_summary=[
                 "Policy restriction changes cross-border supply expectations.",
@@ -40,6 +45,11 @@ def build_seed_historical_cases() -> list[HistoricalCase]:
             entities=["Middle East producers", "shipping routes"],
             industries=["energy", "shipping"],
             affected_assets=["crude oil", "energy equities", "shipping"],
+            asset_returns={
+                "crude oil": {"T+1": 0.018, "T+3": 0.026, "T+7": 0.012},
+                "energy equities": {"T+1": 0.009, "T+3": 0.014, "T+7": 0.006},
+                "shipping": {"T+1": 0.006, "T+3": 0.011, "T+7": -0.002},
+            },
             tags=["conflict", "oil", "risk_premium"],
             causal_chain_summary=[
                 "Conflict raises supply disruption risk.",
@@ -61,6 +71,11 @@ def build_seed_historical_cases() -> list[HistoricalCase]:
             entities=["Federal Reserve"],
             industries=["banks", "growth equities", "bonds"],
             affected_assets=["bonds", "growth equities", "banks", "USD"],
+            asset_returns={
+                "bonds": {"T+1": 0.006, "T+3": 0.011, "T+7": 0.008},
+                "growth equities": {"T+1": 0.004, "T+3": -0.006, "T+7": 0.010},
+                "banks": {"T+1": -0.007, "T+3": -0.012, "T+7": -0.005},
+            },
             tags=["rate_cut", "central_bank", "liquidity"],
             causal_chain_summary=[
                 "Policy rate cut lowers discount-rate expectations.",
@@ -82,6 +97,11 @@ def build_seed_historical_cases() -> list[HistoricalCase]:
             entities=["Federal Reserve", "FOMC"],
             industries=["bonds", "banks", "technology"],
             affected_assets=["Treasury yields", "growth equities", "USD"],
+            asset_returns={
+                "Treasury yields": {"T+1": 0.008, "T+3": 0.014, "T+7": 0.010},
+                "growth equities": {"T+1": -0.010, "T+3": -0.018, "T+7": -0.012},
+                "USD": {"T+1": 0.004, "T+3": 0.009, "T+7": 0.006},
+            },
             tags=["fed_hold", "guidance", "rates"],
             causal_chain_summary=[
                 "Policy rate remains unchanged.",
@@ -103,6 +123,11 @@ def build_seed_historical_cases() -> list[HistoricalCase]:
             entities=["United States", "China", "manufacturers"],
             industries=["manufacturing", "retail", "industrial goods"],
             affected_assets=["importers", "domestic substitutes", "industrial exporters"],
+            asset_returns={
+                "importers": {"T+1": -0.009, "T+3": -0.015, "T+7": -0.010},
+                "domestic substitutes": {"T+1": 0.007, "T+3": 0.016, "T+7": 0.012},
+                "industrial exporters": {"T+1": -0.006, "T+3": -0.011, "T+7": -0.004},
+            },
             tags=["tariff", "trade_policy", "supply_chain"],
             causal_chain_summary=[
                 "Tariff raises expected import costs.",
@@ -124,6 +149,11 @@ def build_seed_historical_cases() -> list[HistoricalCase]:
             entities=["Japan", "semiconductor suppliers"],
             industries=["semiconductors", "autos", "electronics"],
             affected_assets=["semiconductor materials", "auto supply chain", "electronics"],
+            asset_returns={
+                "semiconductor materials": {"T+1": 0.010, "T+3": 0.020, "T+7": 0.013},
+                "auto supply chain": {"T+1": -0.008, "T+3": -0.014, "T+7": -0.007},
+                "electronics": {"T+1": -0.004, "T+3": -0.009, "T+7": -0.003},
+            },
             tags=["earthquake", "supply_chain", "semiconductor"],
             causal_chain_summary=[
                 "Earthquake disrupts upstream production and logistics.",
@@ -145,6 +175,11 @@ def build_seed_historical_cases() -> list[HistoricalCase]:
             entities=["AI labs", "cloud providers", "GPU vendors"],
             industries=["AI software", "cloud", "semiconductors"],
             affected_assets=["AI software", "cloud capex", "GPUs", "data centers"],
+            asset_returns={
+                "AI software": {"T+1": 0.011, "T+3": 0.019, "T+7": 0.015},
+                "cloud capex": {"T+1": 0.006, "T+3": 0.013, "T+7": 0.010},
+                "GPUs": {"T+1": 0.014, "T+3": 0.027, "T+7": 0.020},
+            },
             tags=["AI", "technology_breakthrough", "cloud"],
             causal_chain_summary=[
                 "New model demonstrates stronger capability.",
@@ -166,6 +201,11 @@ def build_seed_historical_cases() -> list[HistoricalCase]:
             entities=["Red Sea shippers", "container carriers"],
             industries=["shipping", "logistics", "retail"],
             affected_assets=["shipping rates", "container carriers", "importers", "oil"],
+            asset_returns={
+                "shipping rates": {"T+1": 0.013, "T+3": 0.024, "T+7": 0.018},
+                "container carriers": {"T+1": 0.010, "T+3": 0.019, "T+7": 0.011},
+                "importers": {"T+1": -0.005, "T+3": -0.010, "T+7": -0.006},
+            },
             tags=["red_sea", "shipping", "conflict"],
             causal_chain_summary=[
                 "Attacks raise route safety concerns.",
@@ -187,6 +227,11 @@ def build_seed_historical_cases() -> list[HistoricalCase]:
             entities=["US administration", "renewable energy firms"],
             industries=["renewable energy", "utilities", "autos"],
             affected_assets=["renewables", "EV supply chain", "traditional energy"],
+            asset_returns={
+                "renewables": {"T+1": 0.015, "T+3": 0.026, "T+7": 0.018},
+                "EV supply chain": {"T+1": 0.009, "T+3": 0.018, "T+7": 0.011},
+                "traditional energy": {"T+1": -0.006, "T+3": -0.011, "T+7": -0.004},
+            },
             tags=["election", "policy", "renewables"],
             causal_chain_summary=[
                 "Election changes policy probability distribution.",
@@ -208,6 +253,11 @@ def build_seed_historical_cases() -> list[HistoricalCase]:
             entities=["cloud providers", "GPU vendors", "data center operators"],
             industries=["cloud", "semiconductors", "data centers", "power equipment"],
             affected_assets=["cloud capex", "GPUs", "data centers", "power equipment"],
+            asset_returns={
+                "cloud capex": {"T+1": -0.003, "T+3": 0.005, "T+7": 0.004},
+                "GPUs": {"T+1": 0.016, "T+3": 0.031, "T+7": 0.024},
+                "data centers": {"T+1": 0.010, "T+3": 0.021, "T+7": 0.015},
+            },
             tags=["AI_capex", "cloud", "GPU", "data_center"],
             causal_chain_summary=[
                 "Cloud guidance raises AI infrastructure demand expectations.",
@@ -233,6 +283,7 @@ def _case(
     entities: list[str],
     industries: list[str],
     affected_assets: list[str],
+    asset_returns: dict[str, dict[str, float]],
     tags: list[str],
     causal_chain_summary: list[str],
     market_reaction_summary: str,
@@ -250,15 +301,12 @@ def _case(
         causal_chain_summary=causal_chain_summary,
         source_notes=[
             "MVP illustrative seed case for workflow demonstration.",
-            "Outcome values are manual examples, not verified investment returns.",
+            "Outcome values are manual seed demo numbers, not verified historical returns or backtests.",
         ],
         tags=tags + ["manual_seed_demo"],
         outcome=HistoricalOutcome(
             benchmark="illustrative benchmark",
-            asset_returns={
-                asset: {"T+1": 0.0, "T+3": 0.0, "T+7": 0.0}
-                for asset in affected_assets[:3]
-            },
+            asset_returns=asset_returns,
             market_reaction_summary=market_reaction_summary,
             outcome_quality="manual_seed_demo",
         ),

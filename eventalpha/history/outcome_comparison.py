@@ -60,6 +60,10 @@ class HistoricalOutcomeComparison(EventAlphaModel):
     analogy_score: float | None = None
     analogy_strength_label: str | None = None
     outcome_quality: str | None = None
+    historical_data_quality: str = "unknown"
+    current_data_quality: str = "missing"
+    comparison_reliability: str = "insufficient"
+    scenario_name: str | None = None
     comparison_status: str
     window_comparisons: list[OutcomeWindowComparison] = Field(default_factory=list)
     matched_lessons: list[str] = Field(default_factory=list)

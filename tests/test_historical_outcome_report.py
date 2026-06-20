@@ -24,5 +24,9 @@ def test_outcome_report_contains_required_sections() -> None:
     assert "T+3" in report
     assert "T+7" in report
     assert "mismatch_reasons=" in report
+    assert "historical_data_quality=manual_seed_demo" in report
+    assert "current_data_quality=missing" in report
+    assert "comparison_reliability=insufficient" in report
+    assert "demo_warning=" in report
     assert "manual_seed_demo" in report
     assert RISK_DISCLAIMER in report

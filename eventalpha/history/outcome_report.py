@@ -27,18 +27,33 @@ def _format_comparison(comparison: HistoricalOutcomeComparison) -> str:
         f"  analogy_score={_fmt(comparison.analogy_score)}",
         f"  analogy_strength={comparison.analogy_strength_label or 'none'}",
         f"  outcome_quality={comparison.outcome_quality or 'none'}",
-        "  windows=",
+        f"  historical_data_quality={comparison.historical_data_quality}",
+        f"  current_data_quality={comparison.current_data_quality}",
+        f"  comparison_reliability={comparison.comparison_reliability}",
+        f"  scenario_name={comparison.scenario_name or 'none'}",
     ]
+    if (
+        comparison.historical_data_quality == "manual_seed_demo"
+        or comparison.current_data_quality == "mock_demo"
+        or comparison.comparison_reliability == "demo_only"
+    ):
+        lines.append(
+            "  demo_warning=Manual seed and mock outcome values are deterministic demo data, "
+            "not verified market returns or investment evidence."
+        )
+    lines.append("  windows=")
     for window in comparison.window_comparisons:
         lines.append(
             "    "
             + (
                 f"{window.window}: historical_return={_fmt(window.historical_return)}, "
                 f"current_return={_fmt(window.current_return)}, "
+                f"historical_excess_return={_fmt(window.historical_excess_return)}, "
+                f"current_excess_return={_fmt(window.current_excess_return)}, "
                 f"historical_direction={window.historical_direction or 'none'}, "
                 f"current_direction={window.current_direction or 'none'}, "
                 f"direction_match={window.direction_match}, "
-                f"current_excess_return={_fmt(window.current_excess_return)}, "
+                f"excess_return_sign_match={window.excess_return_sign_match}, "
                 f"magnitude_gap={_fmt(window.magnitude_gap)}"
             )
         )

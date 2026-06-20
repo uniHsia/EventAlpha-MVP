@@ -383,7 +383,7 @@ Historical analogies are research aids only; seed outcomes are illustrative exam
 
 ## Phase 5C Historical Outcome Comparison
 
-Phase 5C compares historical case outcome windows with current review or market-return results. It is a deterministic offline helper, not a full event study, and it keeps `manual_seed_demo` outcomes clearly marked as illustrative examples rather than verified backtests.
+Phase 5C compares historical case outcome windows with current review or market-return results. It is a deterministic offline helper, not a full event study, and it keeps `manual_seed_demo` outcomes clearly marked as illustrative examples rather than verified backtests. Phase 5C.1 adds non-zero manual seed demo returns, deterministic mock current-outcome scenarios, and comparison data-quality/reliability labels.
 
 Run the historical outcome comparison demo:
 
@@ -391,9 +391,12 @@ Run the historical outcome comparison demo:
 python scripts/run_historical_outcome_comparison_demo.py
 python scripts/run_historical_outcome_comparison_demo.py --demo-current-ai-export
 python scripts/run_historical_outcome_comparison_demo.py --demo-current-ai-export --with-mock-current-outcome
+python scripts/run_historical_outcome_comparison_demo.py --demo-current-ai-export --with-mock-current-outcome --mock-outcome-scenario aligned
+python scripts/run_historical_outcome_comparison_demo.py --demo-current-ai-export --with-mock-current-outcome --mock-outcome-scenario mixed
+python scripts/run_historical_outcome_comparison_demo.py --demo-current-ai-export --with-mock-current-outcome --mock-outcome-scenario opposite
 ```
 
-See `docs/phase5c_historical_outcome_comparison.md` for schemas, comparison statuses, mock current outcome usage, and future real ReviewResult/MarketReturn integration.
+Mock outcomes are deterministic demo data, not real market data. See `docs/phase5c_historical_outcome_comparison.md` for schemas, comparison statuses, data-quality/reliability labels, mock current outcome usage, ReviewResult wiring, and future real ReviewResult/MarketReturn integration.
 
 ## 后续路线
 

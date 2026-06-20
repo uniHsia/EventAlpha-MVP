@@ -6,8 +6,11 @@ import calendar
 import html
 import re
 from datetime import datetime, timezone
+from email.utils import parsedate_to_datetime
 from pathlib import Path
+from types import SimpleNamespace
 from typing import Any
+from xml.etree import ElementTree
 
 from eventalpha.schemas.base import utc_now
 
@@ -40,12 +43,24 @@ class RSSProvider:
             feedparser = _load_feedparser()
             parsed = feedparser.parse(self.feed_url)
         except ImportError as exc:
-            return NewsFetchResult(
-                source_name=self.name,
-                fetched_at=fetched_at,
-                items=[],
-                errors=[f"RSS dependency missing for {self.feed_url}: {exc}"],
-            )
+            local_path = Path(self.feed_url)
+            if local_path.exists():
+                try:
+                    parsed = _parse_local_xml_feed(local_path)
+                except Exception as parse_exc:
+                    return NewsFetchResult(
+                        source_name=self.name,
+                        fetched_at=fetched_at,
+                        items=[],
+                        errors=[f"RSS fetch failed for {self.feed_url}: {parse_exc}"],
+                    )
+            else:
+                return NewsFetchResult(
+                    source_name=self.name,
+                    fetched_at=fetched_at,
+                    items=[],
+                    errors=[f"RSS dependency missing for {self.feed_url}: {exc}"],
+                )
         except Exception as exc:
             return NewsFetchResult(
                 source_name=self.name,
@@ -130,6 +145,32 @@ def _load_feedparser() -> Any:
     return feedparser
 
 
+def _parse_local_xml_feed(path: Path) -> SimpleNamespace:
+    """Parse a local RSS XML fixture when feedparser is unavailable."""
+    root = ElementTree.parse(path).getroot()
+    channel = root.find("channel")
+    if channel is None:
+        channel = root
+    feed = {"title": _element_text(channel.find("title"))}
+    entries = []
+    for item in channel.findall("item"):
+        entry = {
+            "title": _element_text(item.find("title")),
+            "summary": _element_text(item.find("description")),
+            "description": _element_text(item.find("description")),
+            "link": _element_text(item.find("link")),
+            "published": _element_text(item.find("pubDate")),
+        }
+        entries.append(entry)
+    return SimpleNamespace(feed=feed, entries=entries, bozo=False)
+
+
+def _element_text(element: ElementTree.Element[str] | None) -> str:
+    if element is None or element.text is None:
+        return ""
+    return element.text.strip()
+
+
 def _entry_get(entry: Any, key: str, default: Any = None) -> Any:
     if hasattr(entry, "get"):
         return entry.get(key, default)
@@ -146,7 +187,13 @@ def _published_at(entry: Any) -> datetime | None:
     try:
         return datetime.fromisoformat(str(value).replace("Z", "+00:00"))
     except ValueError:
-        return None
+        try:
+            parsed = parsedate_to_datetime(str(value))
+            if parsed.tzinfo is None:
+                return parsed.replace(tzinfo=timezone.utc)
+            return parsed.astimezone(timezone.utc)
+        except (TypeError, ValueError):
+            return None
 
 
 def _matches_query(item: NewsItem, query_text: str, query_terms: list[str]) -> bool:

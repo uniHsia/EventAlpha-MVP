@@ -34,6 +34,10 @@ def test_historical_outcome_comparison_can_be_created() -> None:
     assert comparison.analogy_score is None
     assert comparison.window_comparisons == []
     assert comparison.comparison_id
+    assert comparison.historical_data_quality == "unknown"
+    assert comparison.current_data_quality == "missing"
+    assert comparison.comparison_reliability == "insufficient"
+    assert comparison.scenario_name is None
 
 
 def test_comparison_id_is_stable() -> None:
