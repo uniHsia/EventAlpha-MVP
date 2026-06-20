@@ -349,6 +349,21 @@ python scripts/run_event_lifecycle_tracker.py --analyze-updated 1
 
 See `docs/phase4d_event_lifecycle_tracking.md` for lifecycle stages, matching rules, JSON store behavior, mock/real commands, and the non-investment-advice boundary.
 
+## Phase 5A Historical Case Store
+
+Phase 5A adds an offline historical case store for comparing current events with illustrative past cases. It includes schemas, seed demo cases, a JSON store, rule-based search, and a report script. It does not use RAG, embeddings, LLMs, scheduling, UI, or ledger schema changes.
+
+Run the historical case demo:
+
+```bash
+python scripts/run_historical_case_demo.py
+python scripts/run_historical_case_demo.py --seed
+python scripts/run_historical_case_demo.py --query "AI chip export control"
+python scripts/run_historical_case_demo.py --event-type ai_export_control
+```
+
+Seed outcomes are MVP illustrative examples, not verified market returns or investment advice. See `docs/phase5a_historical_case_store.md` for schema details, store/search behavior, current-event helper usage, and future Phase 5B/5C expansion paths.
+
 ## 后续路线
 
 1. 用真实 LLM 替换 mock Agent，但保持 schema 和 pipeline 接口稳定。
