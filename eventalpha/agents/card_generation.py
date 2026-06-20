@@ -19,12 +19,12 @@ _critique_service = CritiqueCompressionService()
 
 
 def _impact_text(asset_name: str, direction: str, final_confidence: float) -> str:
-    confidence_text = f"final_confidence={final_confidence:.2f}"
+    confidence_text = f"最终置信度={final_confidence:.2f}"
     if direction == "up":
-        return f"{asset_name}: possible upside or stronger market attention ({confidence_text})"
+        return f"{asset_name}: 可能受益或受到市场关注（{confidence_text}）"
     if direction == "down":
-        return f"{asset_name}: possible pressure ({confidence_text})"
-    return f"{asset_name}: needs observation ({confidence_text})"
+        return f"{asset_name}: 可能承压（{confidence_text}）"
+    return f"{asset_name}: 需要继续观察（{confidence_text}）"
 
 
 def generate_event_card(
@@ -51,7 +51,7 @@ def generate_event_card(
         limit=6,
     )
     if not risk_factors:
-        risk_factors = ["The market may already have priced in part of the event."]
+        risk_factors = ["市场可能已经提前反映部分事件信息"]
 
     verification_indicators = _critique_service.compact_event_card_verification_indicators(
         watch_indicators=list(mapping.watch_indicators),
@@ -59,15 +59,15 @@ def generate_event_card(
         limit=8,
     )
 
-    industries = ", ".join(event.affected_industries[:3]) or "related markets"
+    industries = "、".join(event.affected_industries[:3]) or "相关市场"
     return EventCard(
         event_id=event.event_id,
         event_title=event.event_title,
         event_level=score.event_level,
         credibility_score=verification.credibility_score,
         one_sentence=(
-            f"{event.event_title} may affect {industries}; "
-            "follow-up market data is still needed for verification."
+            f"{event.event_title}可能影响{industries}，"
+            "仍需结合后续市场数据验证。"
         ),
         what_happened=event.summary,
         sources=[raw_news.source],

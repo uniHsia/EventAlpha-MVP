@@ -6,3 +6,4 @@ pandas
 requests>=2
 openai
 python-dotenv
+feedparser

@@ -256,6 +256,27 @@ python scripts/evaluate_llm_anti_spurious.py --real-llm --write-report
 
 See `docs/phase3d5_anti_spurious_calibration.md` for the detailed calibration rules, critique compression policy, EventCard compaction behavior, and evaluation metrics.
 
+## Phase 4A News Source Collection
+
+Phase 4A adds a lightweight news-discovery layer that normalizes mock, GDELT, and RSS items into `NewsItem`, then deduplicates, keyword-filters, and optionally converts selected items into the existing `RawNews` pipeline. The default scout path is offline and uses deterministic mock news; real GDELT/RSS fetches require `--real-fetch`.
+
+Run the offline scout:
+
+```bash
+python scripts/run_news_scout.py
+python scripts/run_news_scout.py --analyze-top 1
+```
+
+Run real fetch manually:
+
+```bash
+python scripts/run_news_scout.py --real-fetch --query "AI chip export control" --limit 10
+python scripts/run_news_scout.py --real-fetch --source rss --rss-feed "https://news.google.com/rss/search?q=AI%20chip%20export%20control&hl=en-US&gl=US&ceid=US:en" --limit 10
+python scripts/run_news_scout.py --real-fetch --query "AI chip export control" --limit 10 --analyze-top 3 --use-llm-extraction --use-llm-causal --use-llm-anti-spurious --failure-mode fallback
+```
+
+Use `--source rss` to skip GDELT when the hosted API is rate-limited. Phase 4A does not add scheduling, UI, push notifications, historical news storage, trading, or ledger schema changes. See `docs/phase4a_news_source_collection.md` for provider behavior, dedup/filter rules, mock/real commands, and the non-investment-advice boundary.
+
 ## 后续路线
 
 1. 用真实 LLM 替换 mock Agent，但保持 schema 和 pipeline 接口稳定。
