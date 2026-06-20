@@ -14,6 +14,7 @@ if str(ROOT) not in sys.path:
 
 from eventalpha.llm import LLMConfigurationError  # noqa: E402
 from eventalpha.news import (  # noqa: E402
+    ClusterCredibilityService,
     ClusterVerificationService,
     NewsClusterer,
     NewsKeywordFilter,
@@ -44,6 +45,7 @@ def run_event_cluster_scout(
     model: str | None = None,
     base_url: str | None = None,
     registry: NewsSourceRegistry | None = None,
+    with_credibility: bool = False,
 ) -> dict[str, Any]:
     """Fetch, filter, cluster, verify, and optionally analyze candidate events."""
     selected_registry = registry or (
@@ -65,10 +67,15 @@ def run_event_cluster_scout(
         ),
         reverse=True,
     )
+    credibility_reports = (
+        {cluster.cluster_id: ClusterCredibilityService().evaluate(cluster) for cluster in clusters}
+        if with_credibility
+        else {}
+    )
 
     analyses: list[dict[str, Any]] = []
     for cluster in clusters[: max(analyze_top, 0)]:
-        raw_news = event_cluster_to_raw_news(cluster)
+        raw_news = event_cluster_to_raw_news(cluster, credibility_reports.get(cluster.cluster_id))
         result = run_event_pipeline(
             raw_news,
             persist=False,
@@ -110,6 +117,7 @@ def run_event_cluster_scout(
         "dedup_result": dedup_result,
         "filter_result": filter_result,
         "clusters": clusters,
+        "credibility_reports": credibility_reports,
         "analyses": analyses,
     }
 
@@ -131,6 +139,7 @@ def _print_clusters(result: dict[str, Any]) -> None:
     dedup_result = result["dedup_result"]
     filter_result = result["filter_result"]
     clusters = result["clusters"]
+    credibility_reports = result.get("credibility_reports", {})
 
     print("EventAlpha-MVP Event Cluster Scout")
     print(f"Fetched items: {len(fetch_result.items)}")
@@ -156,6 +165,16 @@ def _print_clusters(result: dict[str, Any]) -> None:
             print(f"   - {item.title} [{item.source}]")
             if item.url:
                 print(f"     {item.url}")
+        report = credibility_reports.get(cluster.cluster_id)
+        if report:
+            print(
+                f"   credibility={report.credibility_status} "
+                f"score={report.credibility_score:.2f} "
+                f"consistency={report.consistency_status} "
+                f"official={report.official_evidence_status}"
+            )
+            if report.risk_flags:
+                print(f"   risk_flags={', '.join(report.risk_flags)}")
 
 
 def _print_analyses(result: dict[str, Any]) -> None:
@@ -184,6 +203,7 @@ def main() -> None:
     )
     parser.add_argument("--rss-feed", action="append", default=None, help="RSS feed URL, repeatable.")
     parser.add_argument("--analyze-top", type=int, default=0, help="Analyze top N clusters with EventAlpha.")
+    parser.add_argument("--with-credibility", action="store_true", help="Include cluster credibility reports.")
     parser.add_argument("--use-llm-extraction", action="store_true")
     parser.add_argument("--use-llm-causal", action="store_true")
     parser.add_argument("--use-llm-anti-spurious", action="store_true")
@@ -206,6 +226,7 @@ def main() -> None:
             failure_mode=args.failure_mode,
             model=args.model,
             base_url=args.base_url,
+            with_credibility=args.with_credibility,
         )
     except LLMConfigurationError as exc:
         print(f"LLM configuration error: {exc}")

@@ -4,10 +4,13 @@ from __future__ import annotations
 
 from eventalpha.schemas import RawNews
 
-from .schemas import EventCluster
+from .schemas import ClusterCredibilityReport, EventCluster
 
 
-def event_cluster_to_raw_news(cluster: EventCluster) -> RawNews:
+def event_cluster_to_raw_news(
+    cluster: EventCluster,
+    credibility_report: ClusterCredibilityReport | None = None,
+) -> RawNews:
     """Convert an EventCluster to RawNews without changing the RawNews schema."""
     urls = [item.url for item in cluster.items if item.url]
     item_ids = [item.news_id for item in cluster.items]
@@ -27,6 +30,17 @@ def event_cluster_to_raw_news(cluster: EventCluster) -> RawNews:
         "item_ids": "|".join(item_ids),
         "dominant_keywords": ",".join(cluster.dominant_keywords),
     }
+    if credibility_report:
+        metadata.update(
+            {
+                "cluster_credibility_score": f"{credibility_report.credibility_score:.4f}",
+                "cluster_credibility_status": credibility_report.credibility_status,
+                "claim_consistency_status": credibility_report.consistency_status,
+                "official_evidence_status": credibility_report.official_evidence_status,
+                "credibility_risk_flags": ",".join(credibility_report.risk_flags),
+                "verification_notes": " | ".join(credibility_report.verification_notes),
+            }
+        )
 
     return RawNews(
         raw_id=cluster.cluster_id,

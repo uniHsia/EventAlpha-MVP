@@ -31,6 +31,13 @@ def make_cluster_id(items: list["NewsItem"]) -> str:
     return f"CLUSTER_{digest}"
 
 
+def make_claim_id(claim_text: str, supporting_item_ids: list[str]) -> str:
+    """Generate a stable claim identifier from normalized text and item IDs."""
+    key = f"{_normalize_text(claim_text)}::{'::'.join(sorted(supporting_item_ids))}"
+    digest = hashlib.sha256(key.encode("utf-8")).hexdigest()[:16]
+    return f"CLAIM_{digest}"
+
+
 class NewsItem(EventAlphaModel):
     """Standardized candidate news item from an external source."""
 
@@ -104,6 +111,59 @@ class EventCluster(EventAlphaModel):
                 self.first_seen_at = self.first_seen_at or min(seen_at)
                 self.last_seen_at = self.last_seen_at or max(seen_at)
         return self
+
+
+class SourceCredibility(EventAlphaModel):
+    """Credibility classification for a news source."""
+
+    source_name: str
+    source_type: str = "blog_or_unknown"
+    credibility_tier: str = "unknown"
+    rationale: str = ""
+
+
+class ClusterClaim(EventAlphaModel):
+    """A lightweight claim extracted from an EventCluster."""
+
+    claim_id: str = ""
+    claim_text: str
+    claim_type: str = "event_fact"
+    supporting_item_ids: list[str] = Field(default_factory=list)
+    supporting_sources: list[str] = Field(default_factory=list)
+    contradicting_item_ids: list[str] = Field(default_factory=list)
+    uncertainty_markers: list[str] = Field(default_factory=list)
+
+    @model_validator(mode="after")
+    def fill_claim_id(self) -> "ClusterClaim":
+        """Fill a stable claim ID when not provided."""
+        if not self.claim_id:
+            self.claim_id = make_claim_id(self.claim_text, self.supporting_item_ids)
+        return self
+
+
+class ClaimConsistencySummary(EventAlphaModel):
+    """Summary of cross-source claim consistency."""
+
+    status: str
+    supporting_source_count: int = 0
+    high_credibility_source_count: int = 0
+    uncertainty_count: int = 0
+    analysis_only: bool = False
+    rationale: str = ""
+
+
+class ClusterCredibilityReport(EventAlphaModel):
+    """Cluster-level pre-verification credibility report."""
+
+    cluster_id: str
+    credibility_score: float
+    credibility_status: str
+    source_summary: list[SourceCredibility] = Field(default_factory=list)
+    claims: list[ClusterClaim] = Field(default_factory=list)
+    consistency_status: str
+    official_evidence_status: str
+    risk_flags: list[str] = Field(default_factory=list)
+    verification_notes: list[str] = Field(default_factory=list)
 
 
 def _normalize_url(url: str | None) -> str:

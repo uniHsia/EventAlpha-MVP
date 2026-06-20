@@ -297,6 +297,32 @@ python scripts/run_event_cluster_scout.py --real-fetch --source rss --rss-feed "
 
 See `docs/phase4b_event_clustering_verification.md` for clustering rules, verification status meanings, cluster-to-RawNews conversion, and the boundary between source support and final truth verification.
 
+## Phase 4C Multi-source Credibility
+
+Phase 4C adds rule-based cluster-level credibility reports on top of `EventCluster`. It classifies source credibility, extracts lightweight claims, checks claim consistency, detects official evidence signals, and can pass the report into `RawNews.metadata` without changing ledger schema.
+
+Run offline credibility checks:
+
+```bash
+python scripts/run_cluster_credibility.py
+python scripts/run_event_cluster_scout.py --with-credibility
+python scripts/run_event_cluster_scout.py --analyze-top 1 --with-credibility
+```
+
+Run real RSS credibility checks:
+
+```bash
+python scripts/run_cluster_credibility.py --real-fetch --source rss --rss-feed "https://news.google.com/rss/search?q=AI%20chip%20export%20control&hl=en-US&gl=US&ceid=US:en" --query "AI chip export control" --limit 10
+```
+
+With optional downstream LLM analysis:
+
+```bash
+python scripts/run_event_cluster_scout.py --real-fetch --source rss --rss-feed "https://news.google.com/rss/search?q=AI%20chip%20export%20control&hl=en-US&gl=US&ceid=US:en" --query "AI chip export control" --limit 10 --with-credibility --analyze-top 3 --use-llm-extraction --use-llm-causal --use-llm-anti-spurious --failure-mode fallback
+```
+
+See `docs/phase4c_multi_source_credibility.md` for source credibility rules, claim extraction, claim consistency, official evidence heuristics, and the boundary between pre-verification and final truth verification.
+
 ## 后续路线
 
 1. 用真实 LLM 替换 mock Agent，但保持 schema 和 pipeline 接口稳定。

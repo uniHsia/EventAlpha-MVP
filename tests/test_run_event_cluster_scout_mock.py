@@ -27,6 +27,25 @@ def test_run_event_cluster_scout_mock_analyze_top_enters_pipeline() -> None:
     assert analysis["pipeline_result"]["prediction_ledger_entry"].prediction_id
 
 
+def test_run_event_cluster_scout_with_credibility_outputs_reports() -> None:
+    """Cluster scout should optionally include credibility reports."""
+    result = run_event_cluster_scout(limit=10, with_credibility=True)
+
+    assert result["credibility_reports"]
+    first_cluster = result["clusters"][0]
+    assert first_cluster.cluster_id in result["credibility_reports"]
+
+
+def test_run_event_cluster_scout_analyze_top_with_credibility_metadata() -> None:
+    """Analyze-top should carry credibility report into RawNews metadata."""
+    result = run_event_cluster_scout(limit=10, analyze_top=1, with_credibility=True)
+
+    metadata = result["analyses"][0]["raw_news"].metadata
+    assert "cluster_credibility_score" in metadata
+    assert "cluster_credibility_status" in metadata
+    assert "claim_consistency_status" in metadata
+
+
 def test_run_event_cluster_scout_can_use_rss_source_selector() -> None:
     """Source selector should be passed through without touching real GDELT."""
     class _Provider:
