@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 from eventalpha.schemas import (
     AntiSpuriousCheck,
     CausalChain,
@@ -35,6 +37,7 @@ def generate_event_card(
     chain: CausalChain,
     anti_spurious: AntiSpuriousCheck,
     mapping: MarketMapping,
+    history_validation_summary: Any | None = None,
 ) -> EventCard:
     """Create a user-facing research card from structured outputs."""
     possible_impacts = [
@@ -46,8 +49,8 @@ def generate_event_card(
         for asset in mapping.mapped_assets
     ]
     risk_factors = _critique_service.compact_event_card_risk_factors(
-        risk_flags=list(verification.risk_flags),
-        anti_spurious_issues=list(anti_spurious.issues),
+        risk_flags=list(verification.risk_flags) + _history_risk_notes(history_validation_summary),
+        anti_spurious_issues=list(anti_spurious.issues) + _history_risk_signals(history_validation_summary),
         limit=6,
     )
     if not risk_factors:
@@ -55,7 +58,8 @@ def generate_event_card(
 
     verification_indicators = _critique_service.compact_event_card_verification_indicators(
         watch_indicators=list(mapping.watch_indicators),
-        required_verifications=list(anti_spurious.required_verifications),
+        required_verifications=list(anti_spurious.required_verifications)
+        + _history_verification_indicators(history_validation_summary),
         limit=8,
     )
 
@@ -75,4 +79,61 @@ def generate_event_card(
         possible_impacts=possible_impacts,
         risk_factors=risk_factors,
         verification_indicators=verification_indicators,
+        history_validation_summary=_summary_payload(history_validation_summary),
     )
+
+
+def _history_risk_notes(summary: Any | None) -> list[str]:
+    if summary is None:
+        return []
+    return list(getattr(summary, "risk_notes", []))
+
+
+def _history_risk_signals(summary: Any | None) -> list[str]:
+    if summary is None:
+        return []
+    items = [
+        signal
+        for signal in getattr(summary, "top_signals", [])
+        if _is_history_risk_signal(signal)
+    ]
+    if getattr(summary, "overall_validation", None) == "historically_weakened":
+        items.append("Historical validation weakened the current causal chain.")
+    return items
+
+
+def _history_verification_indicators(summary: Any | None) -> list[str]:
+    if summary is None:
+        return []
+    items = list(getattr(summary, "required_verifications", []))
+    items.extend(
+        signal
+        for signal in getattr(summary, "top_signals", [])
+        if "requires_verification" in str(signal)
+    )
+    items.extend(list(getattr(summary, "asset_notes", [])))
+    return items
+
+
+def _is_history_risk_signal(value: str) -> bool:
+    text = str(value)
+    return any(
+        marker in text
+        for marker in (
+            "priced_in_risk",
+            "second_order_warning",
+            "historically_weakened",
+            "weakens_chain",
+            "demo_only",
+        )
+    )
+
+
+def _summary_payload(summary: Any | None) -> dict[str, Any] | None:
+    if summary is None:
+        return None
+    if hasattr(summary, "model_dump"):
+        return summary.model_dump(mode="json")
+    if isinstance(summary, dict):
+        return dict(summary)
+    return None

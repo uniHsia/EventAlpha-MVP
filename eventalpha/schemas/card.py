@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 from pydantic import Field
 
 from .base import EventLevel, RISK_DISCLAIMER, TimestampedModel, new_id
@@ -22,4 +24,5 @@ class EventCard(TimestampedModel):
     possible_impacts: list[str] = Field(default_factory=list)
     risk_factors: list[str] = Field(default_factory=list)
     verification_indicators: list[str] = Field(default_factory=list)
+    history_validation_summary: dict[str, Any] | None = None
     risk_disclaimer: str = RISK_DISCLAIMER

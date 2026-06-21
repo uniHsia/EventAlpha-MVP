@@ -2,10 +2,20 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 from eventalpha.schemas import AntiSpuriousCheck, CausalChain, StructuredEvent
+from eventalpha.services import CritiqueCompressionService
 
 
-def check_spurious_reasoning(event: StructuredEvent, chain: CausalChain) -> AntiSpuriousCheck:
+_critique_service = CritiqueCompressionService()
+
+
+def check_spurious_reasoning(
+    event: StructuredEvent,
+    chain: CausalChain,
+    history_validation_summary: Any | None = None,
+) -> AntiSpuriousCheck:
     """Check for weak links, long chains, and second-order mappings."""
     issues: list[str] = []
     required: list[str] = []
@@ -36,6 +46,15 @@ def check_spurious_reasoning(event: StructuredEvent, chain: CausalChain) -> Anti
         risk = "high"
         adjusted = max(0.0, round(chain.confidence - 0.25, 2))
 
+    issues, required, risk, adjusted = _apply_history_validation_summary(
+        issues=issues,
+        required=required,
+        risk=risk,
+        adjusted=adjusted,
+        chain_confidence=chain.confidence,
+        history_validation_summary=history_validation_summary,
+    )
+
     return AntiSpuriousCheck(
         event_id=event.event_id,
         chain_id=chain.chain_id,
@@ -61,7 +80,62 @@ class RuleBasedAntiSpuriousAgent:
         extraction_warnings: list[str] | None = None,
         causal_warnings: list[str] | None = None,
         supported_assets: list[str] | None = None,
+        history_validation_summary: Any | None = None,
     ) -> AntiSpuriousCheck:
         """Run the existing rule-based anti-spurious check."""
         self.warnings = []
-        return check_spurious_reasoning(structured_event, causal_chain)
+        return check_spurious_reasoning(
+            structured_event,
+            causal_chain,
+            history_validation_summary=history_validation_summary,
+        )
+
+
+def _apply_history_validation_summary(
+    *,
+    issues: list[str],
+    required: list[str],
+    risk: str,
+    adjusted: float,
+    chain_confidence: float,
+    history_validation_summary: Any | None,
+) -> tuple[list[str], list[str], str, float]:
+    if history_validation_summary is None:
+        return issues, required, risk, adjusted
+
+    top_signals = [str(signal) for signal in getattr(history_validation_summary, "top_signals", [])]
+    reliability = str(getattr(history_validation_summary, "reliability", "demo_only"))
+    overall = str(getattr(history_validation_summary, "overall_validation", ""))
+
+    if any("second_order_warning" in signal for signal in top_signals):
+        issues.append("Historical validation warns about second-order asset mapping risk.")
+    if any("priced_in_risk" in signal for signal in top_signals):
+        issues.append("Historical validation warns the event may already be priced in.")
+    if any("requires_verification" in signal for signal in top_signals):
+        required.extend(list(getattr(history_validation_summary, "required_verifications", [])))
+        if not getattr(history_validation_summary, "required_verifications", []):
+            required.append("Verify historical/current outcome differences before relying on this chain.")
+    if overall == "historically_weakened" or any("weakens_chain" in signal for signal in top_signals):
+        issues.append("Historical validation weakened the current causal chain.")
+        risk = _raise_risk_conservatively(risk, reliability)
+
+    compressed = _critique_service.compress_anti_spurious(
+        issues=issues,
+        required_verifications=required,
+    )
+    risk_rank = {"low": 0, "medium": 1, "high": 2}
+    if risk_rank.get(risk, 1) == 0:
+        adjusted = chain_confidence
+    elif risk_rank.get(risk, 1) == 1:
+        adjusted = max(0.0, round(chain_confidence - 0.12, 2))
+    else:
+        adjusted = max(0.0, round(chain_confidence - 0.25, 2))
+    return compressed.issues, compressed.required_verifications, risk, adjusted
+
+
+def _raise_risk_conservatively(current: str, reliability: str) -> str:
+    if reliability == "demo_only":
+        return "medium" if current == "low" else current
+    if current == "low":
+        return "medium"
+    return "high"

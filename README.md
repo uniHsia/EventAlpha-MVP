@@ -414,6 +414,22 @@ python scripts/run_case_based_causal_validation_demo.py --demo-current-ai-export
 
 See `docs/phase5d_case_based_causal_validation.md` for schemas, validator rules, confidence hint limits, reliability handling, and future EventCard/AntiSpurious/PredictiveLedger integration paths.
 
+## Phase 5D.1 Card / AntiSpurious Integration
+
+Phase 5D.1 turns case-based validation into a compact `HistoryValidationSummary` that can enrich EventCard risk/verification text and rule-based AntiSpurious explanations. It keeps the default pipeline compatible, does not mutate formal confidence, and does not change the Prediction Ledger schema.
+
+Run the EventCard / AntiSpurious history-validation demo:
+
+```bash
+python scripts/run_event_with_history_validation_demo.py
+python scripts/run_event_with_history_validation_demo.py --demo-current-ai-export
+python scripts/run_event_with_history_validation_demo.py --demo-current-ai-export --mock-outcome-scenario aligned
+python scripts/run_event_with_history_validation_demo.py --demo-current-ai-export --mock-outcome-scenario mixed
+python scripts/run_event_with_history_validation_demo.py --demo-current-ai-export --mock-outcome-scenario opposite
+```
+
+See `docs/phase5d1_card_antispurious_integration.md` for summary fields, card integration, anti-spurious integration, reliability boundaries, and the no-ledger-schema-change guarantee.
+
 ## 后续路线
 
 1. 用真实 LLM 替换 mock Agent，但保持 schema 和 pipeline 接口稳定。

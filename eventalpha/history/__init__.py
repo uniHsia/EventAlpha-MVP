@@ -31,6 +31,10 @@ from .causal_validation import (
 )
 from .causal_validation_report import CaseBasedCausalValidationReportBuilder
 from .causal_validator import CaseBasedCausalValidator
+from .history_validation_summary import (
+    DEMO_HISTORY_RISK_NOTE,
+    HistoryValidationSummary,
+)
 from .outcome_comparison import (
     DEFAULT_OUTCOME_WINDOWS,
     HistoricalCurrentOutcomePair,
@@ -61,6 +65,7 @@ __all__ = [
     "HistoricalAnalogy",
     "HistoricalAnalogyExplainer",
     "HistoricalAnalogyRetriever",
+    "HistoryValidationSummary",
     "HistoricalCase",
     "HistoricalCaseSearch",
     "HistoricalCaseStore",
@@ -78,6 +83,7 @@ __all__ = [
     "make_analogy_id",
     "make_historical_case_id",
     "make_outcome_comparison_id",
+    "DEMO_HISTORY_RISK_NOTE",
     "retrieve_analogies_for_query",
     "retrieve_analogies_for_structured_event",
     "retrieve_analogies_for_tracked_event",
