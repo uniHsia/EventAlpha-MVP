@@ -1,6 +1,7 @@
 """Scheduler infrastructure for EventAlpha."""
 
 from .apscheduler_runner import EventAlphaAPScheduler
+from .briefing_jobs import run_daily_briefing_job
 from .job_registry import JOB_RUNNERS, get_job_runner, run_registered_job
 from .jobs import (
     run_candidate_analysis,
@@ -42,6 +43,7 @@ __all__ = [
     "get_job_runner",
     "run_auto_review_runner",
     "run_candidate_analysis",
+    "run_daily_briefing_job",
     "run_news_lifecycle_scan",
     "run_registered_job",
     "run_review_due_scan",

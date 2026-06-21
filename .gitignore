@@ -5,6 +5,8 @@ data/historical_cases.json
 data/scheduler_state.json
 data/scheduler_runs.jsonl
 reports/
+reports/daily_briefing_*.md
+reports/daily_briefing_*.json
 eventalpha_mvp.sqlite3
 .pytest_cache/
 __pycache__/

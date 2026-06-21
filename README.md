@@ -482,6 +482,27 @@ python scripts/run_scheduler.py --once auto_review_runner --execute --market-pro
 
 Defaults remain dry-run, mock market provider, no LLM, no network, no UI, no trading instructions, and no ledger schema changes. See `docs/phase6c_auto_review_runner.md` and `docs/phase6c1_review_result_integrity.md` for run summaries, provider choices, partial-failure handling, result-integrity checks, and safety boundaries.
 
+## Phase 7A Daily Briefing Generator
+
+Phase 7A adds an offline daily briefing generator that reads local lifecycle state, scheduler logs, urgent priority scores, EventCards, auto-review results, and RuleUpdates, then renders deterministic Markdown and JSON reports. It does not fetch, call LLMs, write ledger rows, change ledger schema, push notifications, or output trading instructions.
+
+Run the briefing CLI:
+
+```bash
+python scripts/run_daily_briefing.py
+python scripts/run_daily_briefing.py --write-report
+python scripts/run_daily_briefing.py --date 2026-06-21 --max-items 10
+```
+
+Run via scheduler infrastructure:
+
+```bash
+python scripts/run_scheduler.py --once daily_briefing
+python scripts/run_scheduler.py --once daily_briefing --execute
+```
+
+Reports are written to `reports/daily_briefing_YYYYMMDD.md` and `.json` only when explicitly requested. See `docs/phase7a_daily_briefing_generator.md` for schemas, collector behavior, rendering, scheduler integration, and safety boundaries.
+
 ## 后续路线
 
 1. 用真实 LLM 替换 mock Agent，但保持 schema 和 pipeline 接口稳定。

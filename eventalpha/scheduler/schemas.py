@@ -17,6 +17,7 @@ SchedulerJobType = Literal[
     "urgent_event_scan",
     "review_due_scan",
     "auto_review_runner",
+    "daily_briefing",
 ]
 SchedulerRunStatus = Literal["started", "success", "failed", "skipped", "dry_run"]
 

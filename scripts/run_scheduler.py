@@ -35,6 +35,7 @@ SUPPORTED_JOBS = (
     "urgent_event_scan",
     "review_due_scan",
     "auto_review_runner",
+    "daily_briefing",
 )
 
 
@@ -58,6 +59,9 @@ def run_scheduler_once(
     allow_partial_review: bool = True,
     ledger_path: str | Path | None = None,
     demo_create_due_review: bool = False,
+    briefing_date: str | None = None,
+    reports_dir: str | Path = "reports",
+    lifecycle_store_path: str | Path = "data/event_lifecycle_store.json",
     interval_minutes: int = 60,
     state_path: str | Path = DEFAULT_SCHEDULER_STATE_PATH,
     runs_path: str | Path = DEFAULT_SCHEDULER_RUNS_PATH,
@@ -92,6 +96,7 @@ def run_scheduler_once(
         store,
         **_agent_kwargs(config),
         **_review_kwargs(config, ledger_path),
+        **_briefing_kwargs(config, briefing_date, reports_dir, ledger_path, lifecycle_store_path, state_path, runs_path),
     )
     return {
         "config": config,
@@ -161,6 +166,14 @@ def build_default_configs(
             dry_run=not execute,
         ),
         SchedulerJobConfig(
+            job_id="daily_briefing",
+            job_type="daily_briefing",
+            interval_minutes=1440,
+            limit=limit,
+            persist=False,
+            dry_run=True,
+        ),
+        SchedulerJobConfig(
             job_id="candidate_analysis",
             job_type="candidate_analysis",
             interval_minutes=interval_minutes,
@@ -197,6 +210,29 @@ def _review_kwargs(config: SchedulerJobConfig, ledger_path: str | Path | None) -
     if config.job_type not in {"review_due_scan", "auto_review_runner"}:
         return {}
     return {"ledger_service": LedgerService(ledger_path)} if ledger_path else {}
+
+
+def _briefing_kwargs(
+    config: SchedulerJobConfig,
+    briefing_date: str | None,
+    reports_dir: str | Path,
+    ledger_path: str | Path | None,
+    lifecycle_store_path: str | Path,
+    state_path: str | Path,
+    runs_path: str | Path,
+) -> dict[str, Any]:
+    if config.job_type != "daily_briefing":
+        return {}
+    from datetime import date
+
+    return {
+        "briefing_date": date.fromisoformat(briefing_date) if briefing_date else None,
+        "reports_dir": reports_dir,
+        "ledger_path": ledger_path,
+        "lifecycle_store_path": lifecycle_store_path,
+        "state_path": state_path,
+        "runs_path": runs_path,
+    }
 
 
 def _ensure_config(store: SchedulerStateStore, config: SchedulerJobConfig) -> None:
@@ -297,6 +333,9 @@ def main(argv: list[str] | None = None) -> None:
     parser.add_argument("--state-path", default=str(DEFAULT_SCHEDULER_STATE_PATH), help="Scheduler state JSON path.")
     parser.add_argument("--runs-path", default=str(DEFAULT_SCHEDULER_RUNS_PATH), help="Scheduler runs JSONL path.")
     parser.add_argument("--ledger-path", default=None, help="Optional SQLite ledger path for review jobs.")
+    parser.add_argument("--date", dest="briefing_date", default=None, help="Briefing date for daily_briefing jobs.")
+    parser.add_argument("--reports-dir", default="reports", help="Daily briefing report output directory.")
+    parser.add_argument("--lifecycle-store-path", default="data/event_lifecycle_store.json", help="Lifecycle store path.")
     parser.add_argument(
         "--demo-create-due-review",
         action="store_true",
@@ -354,6 +393,9 @@ def main(argv: list[str] | None = None) -> None:
         allow_partial_review=args.allow_partial_review,
         ledger_path=args.ledger_path,
         demo_create_due_review=args.demo_create_due_review,
+        briefing_date=args.briefing_date,
+        reports_dir=args.reports_dir,
+        lifecycle_store_path=args.lifecycle_store_path,
         interval_minutes=args.interval_minutes,
         state_path=args.state_path,
         runs_path=args.runs_path,
