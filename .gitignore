@@ -2,6 +2,8 @@ data/cache/
 data/llm_traces/
 data/event_lifecycle_store.json
 data/historical_cases.json
+data/scheduler_state.json
+data/scheduler_runs.jsonl
 reports/
 eventalpha_mvp.sqlite3
 .pytest_cache/

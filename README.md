@@ -430,6 +430,27 @@ python scripts/run_event_with_history_validation_demo.py --demo-current-ai-expor
 
 See `docs/phase5d1_card_antispurious_integration.md` for summary fields, card integration, anti-spurious integration, reliability boundaries, and the no-ledger-schema-change guarantee.
 
+## Phase 6A Scheduler / Periodic Scan
+
+Phase 6A adds an offline-first scheduler layer for periodic news lifecycle scans, candidate analysis, run logs, and status reporting. Defaults are dry-run, no real fetch, no LLM, no ledger persistence, and no ledger schema changes.
+
+Run manual once jobs:
+
+```bash
+python scripts/run_scheduler.py --once scheduler_status
+python scripts/run_scheduler.py --once news_lifecycle_scan
+python scripts/run_scheduler.py --once news_lifecycle_scan --execute
+python scripts/run_scheduler.py --once candidate_analysis
+```
+
+Start interval infrastructure:
+
+```bash
+python scripts/run_scheduler.py --daemon --interval-minutes 60
+```
+
+See `docs/phase6a_scheduler_periodic_scan.md` for job schemas, run records, state store behavior, dry-run/execute/real-fetch/persist boundaries, and APScheduler notes.
+
 ## 后续路线
 
 1. 用真实 LLM 替换 mock Agent，但保持 schema 和 pipeline 接口稳定。
