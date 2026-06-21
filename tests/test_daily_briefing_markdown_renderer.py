@@ -22,7 +22,16 @@ def test_markdown_renderer_contains_sections_and_no_trading_terms() -> None:
             BriefingSection(
                 section_id="new_events",
                 title="今日重点事件",
-                items=[BriefingItem(item_id="1", title="AI event", item_type="event", summary="summary")],
+                items=[
+                    BriefingItem(
+                        item_id="1",
+                        title="AI event",
+                        item_type="event",
+                        summary="summary",
+                        risk_notes=["demo/mock signal"],
+                        verification_indicators=["official filing"],
+                    )
+                ],
             ),
             BriefingSection(section_id="system_status", title="系统状态与风险提示", notes=["ok"]),
         ],
@@ -32,6 +41,8 @@ def test_markdown_renderer_contains_sections_and_no_trading_terms() -> None:
 
     assert "# EventAlpha Daily Briefing - 2026-06-21" in markdown
     assert "今日重点事件" in markdown
+    assert "风险：demo/mock signal" in markdown
+    assert "验证：official filing" in markdown
     assert briefing.risk_disclaimer in markdown
     assert "买入" not in markdown
     assert "卖出" not in markdown

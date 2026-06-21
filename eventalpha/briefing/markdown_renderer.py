@@ -18,15 +18,15 @@ class MarkdownBriefingRenderer:
         ]
         if briefing.warnings:
             lines.extend(["## Warnings", ""])
-            for warning in _dedupe(briefing.warnings):
+            for warning in briefing.warnings[:3]:
                 lines.append(f"- {warning}")
             lines.append("")
 
         for index, section in enumerate(briefing.sections, start=1):
             lines.extend([f"## {index}. {section.title}", ""])
+            for note in section.notes:
+                lines.append(f"- {note}")
             if section.notes:
-                for note in _dedupe(section.notes):
-                    lines.append(f"- {note}")
                 lines.append("")
             if section.items:
                 for item in section.items:
@@ -41,24 +41,23 @@ def _render_item(item: BriefingItem) -> list[str]:
     lines = [f"- **{item.title}** `{item.priority}`"]
     if item.summary:
         lines.append(f"  - {item.summary}")
-    for detail in item.details[:4]:
+    for detail in _metadata_details(item) + item.details[:4]:
         lines.append(f"  - {detail}")
     for risk in item.risk_notes[:3]:
-        lines.append(f"  - Risk: {risk}")
+        lines.append(f"  - 风险：{risk}")
     for verification in item.verification_indicators[:3]:
-        lines.append(f"  - Verify: {verification}")
+        lines.append(f"  - 验证：{verification}")
     for source in item.source_refs[:3]:
-        lines.append(f"  - Source: {source}")
+        lines.append(f"  - 来源：{source}")
     return lines
 
 
-def _dedupe(values: list[str]) -> list[str]:
-    results: list[str] = []
-    seen: set[str] = set()
-    for value in values:
-        normalized = str(value).strip()
-        if not normalized or normalized in seen:
-            continue
-        seen.add(normalized)
-        results.append(normalized)
-    return results
+def _metadata_details(item: BriefingItem) -> list[str]:
+    details: list[str] = []
+    duplicate_count = int(item.metadata.get("duplicate_count") or 0)
+    if duplicate_count > 1 and not any("duplicate_count" in detail for detail in item.details):
+        details.append(f"duplicate_count={duplicate_count}, showing latest only")
+    count = int(item.metadata.get("count") or 0)
+    if count > 1 and not any("count=" in detail for detail in item.details):
+        details.append(f"count={count}")
+    return details

@@ -494,6 +494,8 @@ python scripts/run_daily_briefing.py --write-report
 python scripts/run_daily_briefing.py --date 2026-06-21 --max-items 10
 ```
 
+Use the full `python scripts/run_daily_briefing.py --write-report` command from the repository root; `run_daily_briefing.py --write-report` by itself is not the supported invocation.
+
 Run via scheduler infrastructure:
 
 ```bash
@@ -501,7 +503,7 @@ python scripts/run_scheduler.py --once daily_briefing
 python scripts/run_scheduler.py --once daily_briefing --execute
 ```
 
-Reports are written to `reports/daily_briefing_YYYYMMDD.md` and `.json` only when explicitly requested. See `docs/phase7a_daily_briefing_generator.md` for schemas, collector behavior, rendering, scheduler integration, and safety boundaries.
+Reports are written to `reports/daily_briefing_YYYYMMDD.md` and `.json` only when explicitly requested. See `docs/phase7a_daily_briefing_generator.md` for schemas, collector behavior, rendering, scheduler integration, and safety boundaries. See `docs/phase7a1_briefing_dedup_polish.md` for briefing deduplication and presentation polish.
 
 ## 后续路线
 

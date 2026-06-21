@@ -36,6 +36,7 @@ class BriefingDataCollector:
         self.scheduler_store = SchedulerStateStore(state_path=state_path, runs_path=runs_path)
         self.ledger_path = Path(ledger_path) if ledger_path else get_db_path()
         self.max_items = max(max_items, 1)
+        self.query_limit = max(self.max_items * 5, 50)
 
     def collect(self, briefing_date: date) -> BriefingCollectedData:
         """Collect local state for one briefing date."""
@@ -54,7 +55,8 @@ class BriefingDataCollector:
         tracking_policies = self.scheduler_store.load_tracking_policies()
 
         for run in recent_runs:
-            warnings.extend(run.warnings)
+            if run.job_type != "daily_briefing":
+                warnings.extend(run.warnings)
             warnings.extend(run.errors)
 
         ledger_rows = self._read_ledger_rows(notes=notes, warnings=warnings)
@@ -74,7 +76,7 @@ class BriefingDataCollector:
             review_results=ledger_rows["review_results"],
             review_summaries=ledger_rows["review_summaries"],
             rule_updates=ledger_rows["rule_updates"],
-            warnings=_dedupe(warnings),
+            warnings=list(warnings),
             notes=_dedupe(notes),
         )
 
@@ -94,21 +96,11 @@ class BriefingDataCollector:
             with sqlite3.connect(uri, uri=True) as conn:
                 conn.row_factory = sqlite3.Row
                 return {
-                    "event_cards": self._query_rows(
-                        conn,
-                        """
-                        SELECT card_id, event_id, event_title, event_level, credibility_score,
-                               one_sentence, risk_factors_json, verification_indicators_json,
-                               risk_disclaimer, created_at
-                        FROM event_cards
-                        ORDER BY id DESC
-                        LIMIT ?
-                        """,
-                    ),
+                    "event_cards": self._query_event_cards(conn),
                     "review_results": self._query_rows(
                         conn,
                         """
-                        SELECT review_id, prediction_id, event_id, horizon, asset_name,
+                        SELECT id, review_id, prediction_id, event_id, horizon, asset_name,
                                predicted_direction, actual_return, benchmark_return,
                                excess_return, direction_correct, outperformed_benchmark,
                                causal_validity, review_conclusion, error_type, created_at
@@ -120,7 +112,7 @@ class BriefingDataCollector:
                     "review_summaries": self._query_rows(
                         conn,
                         """
-                        SELECT summary_id, prediction_id, event_id, horizon, total_assets,
+                        SELECT id, summary_id, prediction_id, event_id, horizon, total_assets,
                                reviewed_assets, direction_correct_count, outperform_count,
                                average_excess_return, conclusion_level, summary_text,
                                error_types_json, rule_update_suggestions_json, created_at
@@ -132,7 +124,7 @@ class BriefingDataCollector:
                     "rule_updates": self._query_rows(
                         conn,
                         """
-                        SELECT update_id, rule_id, prediction_id, review_id, summary_id,
+                        SELECT id, update_id, rule_id, prediction_id, review_id, summary_id,
                                old_weight, new_weight, reason, update_action, created_at
                         FROM rule_updates
                         ORDER BY id DESC
@@ -144,8 +136,38 @@ class BriefingDataCollector:
             warnings.append(f"Read-only ledger query failed: {exc}")
             return empty
 
+    def _query_event_cards(self, conn: sqlite3.Connection) -> list[dict[str, Any]]:
+        try:
+            return self._query_rows(
+                conn,
+                """
+                SELECT c.id, c.card_id, c.event_id, c.event_title,
+                       e.event_type, c.event_level, c.credibility_score,
+                       c.one_sentence, c.risk_factors_json,
+                       c.verification_indicators_json, c.risk_disclaimer,
+                       c.created_at
+                FROM event_cards c
+                LEFT JOIN events e ON e.event_id = c.event_id
+                ORDER BY c.id DESC
+                LIMIT ?
+                """,
+            )
+        except sqlite3.Error:
+            return self._query_rows(
+                conn,
+                """
+                SELECT id, card_id, event_id, event_title, NULL AS event_type,
+                       event_level, credibility_score, one_sentence,
+                       risk_factors_json, verification_indicators_json,
+                       risk_disclaimer, created_at
+                FROM event_cards
+                ORDER BY id DESC
+                LIMIT ?
+                """,
+            )
+
     def _query_rows(self, conn: sqlite3.Connection, sql: str) -> list[dict[str, Any]]:
-        rows = conn.execute(sql, (self.max_items,)).fetchall()
+        rows = conn.execute(sql, (self.query_limit,)).fetchall()
         return [_decode_json_fields(dict(row)) for row in rows]
 
 

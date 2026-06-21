@@ -74,4 +74,6 @@ Dry-run builds the briefing and records scheduler notes but does not write repor
 
 Phase 7A does not add Streamlit UI, WeChat push, email push, daily deployment, automatic trading, buy/sell instructions, target prices, LLM generation, real market fetching, ledger schema changes, or repository schema changes.
 
+Phase 7A.1 adds presentation deduplication for repeated EventCards, ReviewResults, RuleUpdates, and warnings. See `docs/phase7a1_briefing_dedup_polish.md`.
+
 This content is for event research and market analysis only. It is not investment advice.

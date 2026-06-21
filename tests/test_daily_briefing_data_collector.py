@@ -25,8 +25,8 @@ def test_collector_handles_empty_state_without_creating_ledger(tmp_path) -> None
     assert not missing_ledger.exists()
 
 
-def test_collector_reads_scheduler_runs_and_dedupes_warnings(tmp_path) -> None:
-    """Scheduler warnings should be collected once."""
+def test_collector_reads_scheduler_runs_and_preserves_warning_counts(tmp_path) -> None:
+    """Scheduler warnings should stay raw so the builder can aggregate counts."""
     store = SchedulerStateStore(tmp_path / "state.json", tmp_path / "runs.jsonl")
     store.save_config([SchedulerJobConfig(job_id="scheduler_status", job_type="scheduler_status")])
     store.append_run(
@@ -47,7 +47,37 @@ def test_collector_reads_scheduler_runs_and_dedupes_warnings(tmp_path) -> None:
 
     assert len(data.scheduler_jobs) == 1
     assert len(data.recent_runs) == 1
-    assert data.warnings.count("RSS query matched no items.") == 1
+    assert data.warnings.count("RSS query matched no items.") == 2
+
+
+def test_collector_ignores_daily_briefing_self_aggregated_warnings(tmp_path) -> None:
+    """Daily briefing run warnings should not recursively amplify report warnings."""
+    store = SchedulerStateStore(tmp_path / "state.json", tmp_path / "runs.jsonl")
+    store.append_run(
+        SchedulerRunRecord(
+            job_id="daily_briefing",
+            job_type="daily_briefing",
+            status="dry_run",
+            warnings=["RSS query matched no items. x52"],
+        ).finish("dry_run")
+    )
+    store.append_run(
+        SchedulerRunRecord(
+            job_id="scheduler_status",
+            job_type="scheduler_status",
+            status="success",
+            warnings=["RSS query matched no items."],
+        ).finish("success")
+    )
+
+    data = BriefingDataCollector(
+        lifecycle_store_path=tmp_path / "missing_lifecycle.json",
+        state_path=tmp_path / "state.json",
+        runs_path=tmp_path / "runs.jsonl",
+        ledger_path=tmp_path / "missing.sqlite3",
+    ).collect(date(2026, 6, 21))
+
+    assert data.warnings == ["RSS query matched no items."]
 
 
 def test_collector_reads_ledger_rows_read_only(tmp_path) -> None:
