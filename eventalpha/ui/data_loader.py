@@ -11,6 +11,13 @@ from pydantic import Field
 
 from eventalpha.briefing import BriefingCollectedData, BriefingDataCollector
 from eventalpha.schemas.base import EventAlphaModel
+from eventalpha.ui.components import (
+    _build_recent_reviews,
+    _build_recent_rule_updates,
+    _build_top_events,
+    build_dashboard_summary,
+)
+from eventalpha.ui.formatters import aggregate_warnings, format_warning_friendly
 
 
 class BriefingReportFile(EventAlphaModel):
@@ -60,13 +67,22 @@ class StreamlitDataLoader:
         notes = list(collected_data.notes)
         if not reports:
             notes.append(f"No local briefing reports found in {self.reports_dir}.")
-        return {
+        raw_warnings = aggregate_warnings(list(collected_data.warnings), limit=3)
+        bundle: dict[str, Any] = {
             "briefing_date": target_date,
             "collected_data": collected_data,
             "reports": reports,
             "latest_report": latest_report,
             "notes": _dedupe(notes),
             "warnings": list(collected_data.warnings),
+            "friendly_warnings": format_warning_friendly(raw_warnings),
+            "top_events": _build_top_events(collected_data),
+            "recent_reviews": _build_recent_reviews(collected_data),
+            "recent_rule_updates": _build_recent_rule_updates(collected_data),
+        }
+        bundle["dashboard_metrics"] = build_dashboard_summary(bundle).model_dump(mode="json")
+        return {
+            **bundle,
         }
 
     def load_reports(self) -> list[BriefingReportFile]:

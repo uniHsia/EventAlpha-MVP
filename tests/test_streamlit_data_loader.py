@@ -26,6 +26,11 @@ def test_loader_handles_missing_files_without_creating_ledger(tmp_path) -> None:
     assert bundle["reports"] == []
     assert bundle["latest_report"] is None
     assert bundle["collected_data"].active_events == []
+    assert bundle["top_events"] == []
+    assert bundle["recent_reviews"] == []
+    assert bundle["recent_rule_updates"] == []
+    assert bundle["friendly_warnings"] == []
+    assert "dashboard_metrics" in bundle
     assert not missing_ledger.exists()
     assert any("No local briefing reports" in note for note in bundle["notes"])
 
@@ -118,6 +123,8 @@ def test_loader_reads_ledger_rows_read_only(tmp_path) -> None:
     assert data.event_cards[0]["event_title"] == "AI export event"
     assert data.review_results[0]["asset_name"] == "AI chips"
     assert data.rule_updates[0]["rule_id"] == "RULE_AI_EXPORT_001"
+    assert bundle["recent_reviews"][0]["资产"] == "AI chips"
+    assert bundle["recent_rule_updates"][0]["RuleID"] == "RULE_AI_EXPORT_001"
 
 
 def _create_ui_ledger_fixture(path) -> None:

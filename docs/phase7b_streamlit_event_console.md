@@ -7,18 +7,21 @@ ledger writes.
 
 ## Pages
 
-- Dashboard: briefing summary, urgency counts, latest auto-review status,
-  ReviewResult count, RuleUpdate count, recent warnings, and the risk disclaimer.
+- Dashboard: Chinese teacher-friendly summary, urgency counts, Top Events,
+  recent auto-review results, recent rule updates, friendly warnings, and the
+  risk disclaimer.
 - Daily Briefing: latest local Markdown report, or an in-memory preview when no
   report file exists.
-- Event Cards: deduped cards with level, title, summary, risk, verification, and
-  duplicate count.
-- Lifecycle: active tracked events split from analysis-only/background items.
-- Reviews: deduped asset-level ReviewResults with return and causal-validity
-  fields.
-- Rule Updates: rule/action aggregation with count and latest weights.
-- Scheduler Status: configured jobs, recent runs, tracking policies, warning
-  aggregation, and local status notes.
+- Event Cards: card-first view with level, title, summary, risk factors,
+  verification indicators, duplicate count, and a folded raw table.
+- Lifecycle: active tracked events split from analysis-only/background items,
+  with Chinese stage and credibility explanations.
+- Reviews: deduped asset-level ReviewResults with Chinese explanation,
+  direction correctness, causal validity, error type, and return fields.
+- Rule Updates: rule/action aggregation with count, latest weights, rationale,
+  and Chinese action explanation.
+- Scheduler Status: readable metrics, status/job-type tables, folded config,
+  folded tracking policies, warning aggregation, and local status notes.
 
 ## Data Sources
 
@@ -51,6 +54,11 @@ streamlit run app_streamlit.py
 
 The console is local-only and does not start APScheduler daemon jobs. Scheduler
 state is displayed from existing JSON state/run-log files.
+
+Phase 7B.1 polishes the console for live demos. Warnings such as
+`RSS query matched no items` are shown as friendly data-source notices on the
+Dashboard, while raw warning text remains available inside expanders for
+debugging. Raw JSON and wide tables are folded by default.
 
 ## Boundary
 

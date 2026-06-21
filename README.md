@@ -521,7 +521,7 @@ Run the console:
 streamlit run app_streamlit.py
 ```
 
-The console reads local files only and treats missing files as empty state. See `docs/phase7b_streamlit_event_console.md` for page structure, data sources, read-only boundaries, and operating notes.
+The console reads local files only and treats missing files as empty state. Phase 7B.1 adds a teacher-friendly Chinese dashboard, Top Events, recent review cards, rule-update cards, and friendly warning summaries. See `docs/phase7b_streamlit_event_console.md` for page structure, data sources, read-only boundaries, and operating notes, and `docs/phase7b1_dashboard_ux_polish.md` for the presentation polish rules.
 
 ## 后续路线
 
