@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from eventalpha.news import EventLifecycleStore
+from eventalpha.news import EventLifecycleStore, TrackedEvent
+from eventalpha.schemas.base import utc_now
 from eventalpha.scheduler import (
     SchedulerJobConfig,
     SchedulerStateStore,
@@ -106,6 +107,38 @@ def test_scheduler_status_reports_state(tmp_path) -> None:
 
     assert record.status == "success"
     assert any("Configured jobs: 1" in note for note in record.notes)
+
+
+def test_run_scheduler_once_urgent_scan_uses_injected_lifecycle_path(tmp_path) -> None:
+    """CLI helper should pass injected lifecycle path into urgent scan jobs."""
+    from scripts.run_scheduler import run_scheduler_once
+
+    now = utc_now()
+    lifecycle_path = tmp_path / "lifecycle.json"
+    lifecycle_store = EventLifecycleStore(lifecycle_path).load()
+    lifecycle_store.upsert(
+        TrackedEvent(
+            canonical_title="Injected lifecycle event",
+            lifecycle_stage="developing",
+            first_seen_at=now,
+            last_seen_at=now,
+            source_count=2,
+            sources=["Mock"],
+            credibility_status="multi_source_supported",
+        )
+    )
+    lifecycle_store.save()
+
+    result = run_scheduler_once(
+        "urgent_event_scan",
+        execute=True,
+        lifecycle_store_path=lifecycle_path,
+        state_path=tmp_path / "scheduler_state.json",
+        runs_path=tmp_path / "scheduler_runs.jsonl",
+    )
+
+    assert result["record"].status == "success"
+    assert result["record"].candidate_items == 1
 
 
 def _store(tmp_path) -> SchedulerStateStore:

@@ -94,6 +94,7 @@ def run_scheduler_once(
     record = run_registered_job(
         config,
         store,
+        **_lifecycle_kwargs(config, lifecycle_store_path),
         **_agent_kwargs(config),
         **_review_kwargs(config, ledger_path),
         **_briefing_kwargs(config, briefing_date, reports_dir, ledger_path, lifecycle_store_path, state_path, runs_path),
@@ -210,6 +211,17 @@ def _review_kwargs(config: SchedulerJobConfig, ledger_path: str | Path | None) -
     if config.job_type not in {"review_due_scan", "auto_review_runner"}:
         return {}
     return {"ledger_service": LedgerService(ledger_path)} if ledger_path else {}
+
+
+def _lifecycle_kwargs(config: SchedulerJobConfig, lifecycle_store_path: str | Path) -> dict[str, Any]:
+    if config.job_type not in {
+        "news_lifecycle_scan",
+        "candidate_analysis",
+        "scheduler_status",
+        "urgent_event_scan",
+    }:
+        return {}
+    return {"lifecycle_store_path": lifecycle_store_path}
 
 
 def _briefing_kwargs(

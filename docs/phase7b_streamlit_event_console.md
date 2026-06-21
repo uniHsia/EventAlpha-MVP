@@ -52,6 +52,23 @@ Start the console:
 streamlit run app_streamlit.py
 ```
 
+After running the Phase 7C full demo, start the same console in isolated demo
+mode:
+
+```bash
+streamlit run app_streamlit.py -- --demo-mode
+```
+
+or:
+
+```bash
+EVENTALPHA_DEMO_MODE=1 streamlit run app_streamlit.py
+```
+
+Demo mode reads `data/demo/` and `reports/demo/` only. It remains read-only and
+shows a prompt to run `python scripts/run_full_demo.py --reset-demo-state
+--write-summary` when demo data is missing.
+
 The console is local-only and does not start APScheduler daemon jobs. Scheduler
 state is displayed from existing JSON state/run-log files.
 

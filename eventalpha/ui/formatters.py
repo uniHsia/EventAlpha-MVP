@@ -318,6 +318,25 @@ def contains_forbidden_trading_terms(value: str) -> bool:
     return any(term in value for term in FORBIDDEN_TRADING_TERMS)
 
 
+def format_technical_note(value: Any) -> str:
+    """Translate common technical status tokens into plain Chinese."""
+    text = str(value or "").strip()
+    mapping = {
+        "lifecycle_stage=developing": "事件仍在持续发展",
+        "developing": "事件仍在持续发展",
+        "official_source_present": "出现官方来源或官方表述",
+        "single_source_low_confidence": "当前仍是单源低可信，需要更多来源验证",
+        "analysis_only": "背景分析/评论类内容",
+        "matched_existing": "与已有事件匹配，生命周期持续更新",
+    }
+    if text in mapping:
+        return mapping[text]
+    result = text
+    for token, label in mapping.items():
+        result = result.replace(token, label)
+    return result or MISSING
+
+
 def _rule_update_explanation(row: dict[str, Any]) -> str:
     rule_id = row.get("rule_id") or "rule_update"
     action = row.get("update_action") or "unknown"

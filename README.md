@@ -523,6 +523,31 @@ streamlit run app_streamlit.py
 
 The console reads local files only and treats missing files as empty state. Phase 7B.1 adds a teacher-friendly Chinese dashboard, Top Events, recent review cards, rule-update cards, and friendly warning summaries. See `docs/phase7b_streamlit_event_console.md` for page structure, data sources, read-only boundaries, and operating notes, and `docs/phase7b1_dashboard_ux_polish.md` for the presentation polish rules.
 
+## Phase 7C End-to-End Demo Flow
+
+Phase 7C adds one repeatable offline demo command that connects event analysis, Prediction Ledger, due review, auto review, RuleUpdate, Daily Briefing, and Streamlit data validation. By default it uses isolated demo state under `data/demo/` and `reports/demo/`, so it does not pollute the default `eventalpha_mvp.sqlite3`.
+
+Run the full demo:
+
+```bash
+python scripts/run_full_demo.py --reset-demo-state --write-summary
+python scripts/run_full_demo.py --scenario ai_export_control --write-summary
+```
+
+Then open the read-only console in demo mode:
+
+```bash
+streamlit run app_streamlit.py -- --demo-mode
+```
+
+or:
+
+```bash
+EVENTALPHA_DEMO_MODE=1 streamlit run app_streamlit.py
+```
+
+The full demo does not fetch news, call LLMs, start a scheduler daemon, send notifications, perform trading actions, or change the ledger schema. Use `--use-default-state` only when you intentionally want to run against normal local state. See `docs/phase7c_end_to_end_demo_flow.md` for scenario details, isolated paths, demo summary files, and operating boundaries.
+
 ## 后续路线
 
 1. 用真实 LLM 替换 mock Agent，但保持 schema 和 pipeline 接口稳定。
