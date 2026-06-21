@@ -505,6 +505,24 @@ python scripts/run_scheduler.py --once daily_briefing --execute
 
 Reports are written to `reports/daily_briefing_YYYYMMDD.md` and `.json` only when explicitly requested. See `docs/phase7a_daily_briefing_generator.md` for schemas, collector behavior, rendering, scheduler integration, and safety boundaries. See `docs/phase7a1_briefing_dedup_polish.md` for briefing deduplication and presentation polish.
 
+## Phase 7B Streamlit Event Console
+
+Phase 7B adds a local read-only Streamlit console for inspecting the current EventAlpha state: Daily Briefing, EventCards, lifecycle events, urgent priority, review results, rule updates, scheduler runs, and tracking policies. It does not fetch news, call LLMs, write ledger rows, start APScheduler daemon jobs, push notifications, or output trading instructions.
+
+Generate a local briefing report first if you want the Daily Briefing page to show persisted Markdown:
+
+```bash
+python scripts/run_daily_briefing.py --write-report
+```
+
+Run the console:
+
+```bash
+streamlit run app_streamlit.py
+```
+
+The console reads local files only and treats missing files as empty state. See `docs/phase7b_streamlit_event_console.md` for page structure, data sources, read-only boundaries, and operating notes.
+
 ## 后续路线
 
 1. 用真实 LLM 替换 mock Agent，但保持 schema 和 pipeline 接口稳定。

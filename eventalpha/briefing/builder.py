@@ -399,6 +399,7 @@ def _dedupe_event_cards(rows: list[dict[str, Any]]) -> tuple[list[dict[str, Any]
 
     groups: dict[str, list[dict[str, Any]]] = {}
     for row in representatives:
+        event_id = str(row.get("event_id") or "").strip()
         title_key = normalize_text(row.get("event_title"))
         event_type_key = normalize_text(row.get("event_type"))
         content_key = "::".join(
