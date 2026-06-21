@@ -24,6 +24,13 @@ from .case_search import (
 )
 from .case_store import DEFAULT_HISTORICAL_CASE_STORE_PATH, HistoricalCaseStore
 from .case_summary import summarize_case, summarize_search_results
+from .causal_validation import (
+    AssetLevelHistoricalSignal,
+    CaseBasedCausalValidation,
+    CausalValidationSignal,
+)
+from .causal_validation_report import CaseBasedCausalValidationReportBuilder
+from .causal_validator import CaseBasedCausalValidator
 from .outcome_comparison import (
     DEFAULT_OUTCOME_WINDOWS,
     HistoricalCurrentOutcomePair,
@@ -44,6 +51,11 @@ from .seed_cases import build_seed_historical_cases
 __all__ = [
     "AnalogyDimensionScore",
     "AnalogyInputContext",
+    "AssetLevelHistoricalSignal",
+    "CaseBasedCausalValidation",
+    "CaseBasedCausalValidationReportBuilder",
+    "CaseBasedCausalValidator",
+    "CausalValidationSignal",
     "DEFAULT_HISTORICAL_CASE_STORE_PATH",
     "DEFAULT_OUTCOME_WINDOWS",
     "HistoricalAnalogy",

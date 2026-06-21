@@ -398,6 +398,22 @@ python scripts/run_historical_outcome_comparison_demo.py --demo-current-ai-expor
 
 Mock outcomes are deterministic demo data, not real market data. See `docs/phase5c_historical_outcome_comparison.md` for schemas, comparison statuses, data-quality/reliability labels, mock current outcome usage, ReviewResult wiring, and future real ReviewResult/MarketReturn integration.
 
+## Phase 5D Case-Based Causal Validation
+
+Phase 5D uses historical analogies and outcome comparisons to produce deterministic causal-validation signals for the current causal chain and asset mapping. It remains offline and does not call LLMs, use RAG, fetch market data, write Prediction Ledger rows, or change ledger schema. Manual seed and mock outcomes remain demo-only signals.
+
+Run the case-based causal validation demo:
+
+```bash
+python scripts/run_case_based_causal_validation_demo.py
+python scripts/run_case_based_causal_validation_demo.py --demo-current-ai-export
+python scripts/run_case_based_causal_validation_demo.py --demo-current-ai-export --mock-outcome-scenario aligned
+python scripts/run_case_based_causal_validation_demo.py --demo-current-ai-export --mock-outcome-scenario mixed
+python scripts/run_case_based_causal_validation_demo.py --demo-current-ai-export --mock-outcome-scenario opposite
+```
+
+See `docs/phase5d_case_based_causal_validation.md` for schemas, validator rules, confidence hint limits, reliability handling, and future EventCard/AntiSpurious/PredictiveLedger integration paths.
+
 ## 后续路线
 
 1. 用真实 LLM 替换 mock Agent，但保持 schema 和 pipeline 接口稳定。
