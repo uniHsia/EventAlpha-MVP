@@ -30,6 +30,20 @@ def test_run_scheduler_once_scheduler_status(tmp_path) -> None:
     assert (tmp_path / "runs.jsonl").exists()
 
 
+def test_run_scheduler_once_urgent_event_scan_default_dry_run(tmp_path) -> None:
+    """Urgent once-run should default to dry-run and accept top_n."""
+    result = run_scheduler_once(
+        "urgent_event_scan",
+        top_n=3,
+        state_path=tmp_path / "state.json",
+        runs_path=tmp_path / "runs.jsonl",
+    )
+
+    assert result["config"].dry_run is True
+    assert result["config"].limit == 3
+    assert result["record"].status == "dry_run"
+
+
 def test_run_scheduler_once_execute_mock_scan(tmp_path) -> None:
     """Execute mock scan should succeed without real fetch."""
     result = run_scheduler_once(

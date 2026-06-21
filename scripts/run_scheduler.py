@@ -23,7 +23,7 @@ from eventalpha.scheduler import (  # noqa: E402
 from eventalpha.schemas import RISK_DISCLAIMER  # noqa: E402
 
 
-SUPPORTED_JOBS = ("news_lifecycle_scan", "candidate_analysis", "scheduler_status")
+SUPPORTED_JOBS = ("news_lifecycle_scan", "candidate_analysis", "scheduler_status", "urgent_event_scan")
 
 
 def run_scheduler_once(
@@ -35,6 +35,7 @@ def run_scheduler_once(
     rss_feed: str | None = None,
     query: str | None = None,
     limit: int = 10,
+    top_n: int | None = None,
     persist: bool = False,
     use_llm_extraction: bool = False,
     use_llm_causal: bool = False,
@@ -44,6 +45,7 @@ def run_scheduler_once(
     runs_path: str | Path = DEFAULT_SCHEDULER_RUNS_PATH,
 ) -> dict[str, Any]:
     """Run one scheduler job and return structured output for tests."""
+    effective_limit = top_n if top_n is not None else limit
     config = SchedulerJobConfig(
         job_id=job_type,
         job_type=job_type,
@@ -51,7 +53,7 @@ def run_scheduler_once(
         query=query,
         source=source,
         rss_feed=rss_feed,
-        limit=limit,
+        limit=effective_limit,
         real_fetch=real_fetch,
         use_llm_extraction=use_llm_extraction,
         use_llm_causal=use_llm_causal,
@@ -98,6 +100,14 @@ def build_default_configs(
             rss_feed=rss_feed,
             limit=limit,
             real_fetch=real_fetch,
+            persist=False,
+            dry_run=not execute,
+        ),
+        SchedulerJobConfig(
+            job_id="urgent_event_scan",
+            job_type="urgent_event_scan",
+            interval_minutes=max(15, min(interval_minutes, 60)),
+            limit=min(limit, 10),
             persist=False,
             dry_run=not execute,
         ),
@@ -155,6 +165,10 @@ def _print_record(record: SchedulerRunRecord) -> None:
         print("notes=")
         for note in record.notes:
             print(f"  - {note}")
+    if record.warnings:
+        print("warnings=")
+        for warning in record.warnings:
+            print(f"  - {warning}")
     if record.errors:
         print("errors=")
         for error in record.errors:
@@ -174,6 +188,7 @@ def main(argv: list[str] | None = None) -> None:
     parser.add_argument("--rss-feed", default=None, help="RSS feed URL.")
     parser.add_argument("--query", default=None, help="Provider query.")
     parser.add_argument("--limit", type=int, default=10, help="Item or active event limit.")
+    parser.add_argument("--top-n", type=int, default=None, help="Priority event display/analysis limit.")
     parser.add_argument("--persist", action="store_true", help="Allow candidate analysis to write ledger.")
     parser.add_argument("--use-llm-extraction", action="store_true", help="Use mock/real LLM extraction when executing candidate analysis.")
     parser.add_argument("--use-llm-causal", action="store_true", help="Use mock/real LLM causal reasoning when executing candidate analysis.")
@@ -185,6 +200,7 @@ def main(argv: list[str] | None = None) -> None:
 
     if args.daemon:
         store = SchedulerStateStore(args.state_path, args.runs_path)
+        daemon_limit = args.top_n if args.top_n is not None else args.limit
         configs = build_default_configs(
             execute=args.execute,
             interval_minutes=args.interval_minutes,
@@ -192,7 +208,7 @@ def main(argv: list[str] | None = None) -> None:
             source=args.source,
             rss_feed=args.rss_feed,
             query=args.query,
-            limit=args.limit,
+            limit=daemon_limit,
             persist=args.persist,
             use_llm_extraction=args.use_llm_extraction,
             use_llm_causal=args.use_llm_causal,
@@ -217,6 +233,7 @@ def main(argv: list[str] | None = None) -> None:
         rss_feed=args.rss_feed,
         query=args.query,
         limit=args.limit,
+        top_n=args.top_n,
         persist=args.persist,
         use_llm_extraction=args.use_llm_extraction,
         use_llm_causal=args.use_llm_causal,

@@ -25,6 +25,7 @@ from eventalpha.orchestration import run_event_pipeline as default_run_event_pip
 from eventalpha.schemas import RawNews
 from eventalpha.schemas.base import utc_now
 
+from .priority_ranker import EventPriorityRanker
 from .schemas import SchedulerJobConfig, SchedulerRunRecord
 from .state_store import SchedulerStateStore
 
@@ -46,14 +47,17 @@ def run_news_lifecycle_scan(
             clusters=scan["clusters"],
             reports=scan["reports"],
         )
+        fetch_errors, fetch_warnings = _split_fetch_warnings(scan["fetch_result"].errors)
+        notes = _scan_notes(config) + [f"Warning: {warning}" for warning in fetch_warnings]
         record = record.model_copy(
             update={
                 "fetched_items": len(scan["fetch_result"].items),
                 "candidate_items": scan["filter_result"].after_count,
                 "clusters_processed": len(scan["clusters"]),
                 "lifecycle_updates": len(updates) + len(stale_updates),
-                "errors": list(scan["fetch_result"].errors),
-                "notes": _scan_notes(config),
+                "errors": fetch_errors,
+                "warnings": fetch_warnings,
+                "notes": notes,
             }
         )
         if config.dry_run:
@@ -82,10 +86,30 @@ def run_candidate_analysis(
     try:
         lifecycle_store = EventLifecycleStore(lifecycle_store_path).load()
         active_events = lifecycle_store.list_active_events()
-        candidates = active_events[: config.limit]
-        notes = [f"Active events available: {len(active_events)}."]
+        ranked_scores = EventPriorityRanker().rank(active_events)
+        event_by_id = {event.tracked_event_id: event for event in active_events}
+        selectable_scores = [
+            score
+            for score in ranked_scores
+            if score.urgency_level in {"urgent", "high", "normal"}
+        ]
+        skipped_scores = [
+            score
+            for score in ranked_scores
+            if score.urgency_level in {"background", "ignore"}
+        ]
+        candidates = [
+            event_by_id[score.tracked_event_id]
+            for score in selectable_scores[: config.limit]
+            if score.tracked_event_id in event_by_id
+        ]
+        candidate_scores = selectable_scores[: len(candidates)]
+        notes = [
+            f"Active events available: {len(active_events)}.",
+            f"Priority candidates available: {len(selectable_scores)}.",
+        ]
         if config.dry_run:
-            notes.extend(f"Would analyze: {event.canonical_title}" for event in candidates)
+            notes.extend(_candidate_selection_notes(candidate_scores, skipped_scores, max_skipped=3))
             record = record.model_copy(
                 update={
                     "candidate_items": len(candidates),
@@ -109,6 +133,7 @@ def run_candidate_analysis(
                 notes.append("Persist=True was explicitly enabled for candidate analysis.")
             else:
                 notes.append("Persist=False: Prediction Ledger was not written.")
+            notes.extend(_candidate_selection_notes(candidate_scores, skipped_scores, max_skipped=3))
             record = record.model_copy(
                 update={
                     "candidate_items": len(candidates),
@@ -134,12 +159,33 @@ def run_scheduler_status(
         jobs = store.load_config()
         recent_runs = store.list_recent_runs(limit=10)
         active_events = EventLifecycleStore(lifecycle_store_path).load().list_active_events()
-        errors = [error for run in recent_runs for error in run.errors]
+        urgency_scores = EventPriorityRanker().rank(active_events)
+        urgent_events = [score for score in urgency_scores if score.urgency_level == "urgent"]
+        high_events = [score for score in urgency_scores if score.urgency_level == "high"]
+        background_events = [
+            score for score in urgency_scores if score.urgency_level in {"background", "ignore"}
+        ]
+        warnings = [warning for run in recent_runs for warning in run.warnings]
+        errors: list[str] = []
+        for run in recent_runs:
+            for error in run.errors:
+                if _is_no_items_warning(error):
+                    warnings.append(error)
+                else:
+                    errors.append(error)
         notes = [
             f"Configured jobs: {len(jobs)}.",
             f"Recent runs: {len(recent_runs)}.",
             f"Active events: {len(active_events)}.",
+            f"Urgent events: {len(urgent_events)}.",
+            f"High priority events: {len(high_events)}.",
+            f"Background or paused events: {len(background_events)}.",
         ]
+        for score in urgent_events[:3]:
+            notes.append(f"Top urgent: {score.title} ({score.urgency_score:.1f}).")
+        for warning in warnings[:3]:
+            if _is_no_items_warning(warning):
+                notes.append(f"Recent no-items warning: {warning}")
         for job in jobs:
             last_success = store.get_last_successful_run(job.job_id)
             if last_success:
@@ -148,6 +194,7 @@ def run_scheduler_status(
             update={
                 "candidate_items": len(active_events),
                 "errors": errors[:10],
+                "warnings": warnings[:10],
                 "notes": notes,
             }
         ).finish("success")
@@ -246,4 +293,46 @@ def _scan_notes(config: SchedulerJobConfig) -> list[str]:
     ]
     if not config.real_fetch:
         notes.append("Offline mock news registry used.")
+    return notes
+
+
+def _split_fetch_warnings(errors: list[str]) -> tuple[list[str], list[str]]:
+    """Treat RSS no-items messages as warnings rather than hard errors."""
+    hard_errors: list[str] = []
+    warnings: list[str] = []
+    for error in errors:
+        if _is_no_items_warning(error):
+            warnings.append(error)
+        else:
+            hard_errors.append(error)
+    return hard_errors, warnings
+
+
+def _is_no_items_warning(message: str) -> bool:
+    return "rss query matched no items" in message.casefold()
+
+
+def _candidate_selection_notes(
+    selected_scores,
+    skipped_scores,
+    *,
+    max_skipped: int = 3,
+) -> list[str]:
+    """Build compact candidate selection notes for dry-run and execute modes."""
+    notes: list[str] = []
+    for score in selected_scores:
+        reason = score.reasons[0] if score.reasons else "no primary reason"
+        notes.append(
+            f"Would analyze: {score.title} "
+            f"[{score.urgency_level}, score={score.urgency_score:.1f}; {reason}]"
+        )
+    for score in skipped_scores[:max_skipped]:
+        label = "background" if score.urgency_level == "background" else "paused"
+        penalty = score.penalties[0] if score.penalties else "low priority"
+        notes.append(
+            f"Skipped {label}: {score.title} "
+            f"[{score.urgency_level}, score={score.urgency_score:.1f}; {penalty}]"
+        )
+    if len(skipped_scores) > max_skipped:
+        notes.append(f"Skipped additional background/paused events: {len(skipped_scores) - max_skipped}.")
     return notes

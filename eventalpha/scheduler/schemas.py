@@ -10,7 +10,12 @@ from pydantic import Field, field_validator
 from eventalpha.schemas.base import EventAlphaModel, new_id, utc_now
 
 
-SchedulerJobType = Literal["news_lifecycle_scan", "candidate_analysis", "scheduler_status"]
+SchedulerJobType = Literal[
+    "news_lifecycle_scan",
+    "candidate_analysis",
+    "scheduler_status",
+    "urgent_event_scan",
+]
 SchedulerRunStatus = Literal["started", "success", "failed", "skipped", "dry_run"]
 
 
@@ -54,6 +59,7 @@ class SchedulerRunRecord(EventAlphaModel):
     lifecycle_updates: int = 0
     analyzed_events: int = 0
     errors: list[str] = Field(default_factory=list)
+    warnings: list[str] = Field(default_factory=list)
     notes: list[str] = Field(default_factory=list)
 
     def finish(
@@ -61,6 +67,7 @@ class SchedulerRunRecord(EventAlphaModel):
         status: SchedulerRunStatus,
         *,
         errors: list[str] | None = None,
+        warnings: list[str] | None = None,
         notes: list[str] | None = None,
     ) -> "SchedulerRunRecord":
         """Return a finished copy of this run record."""
@@ -69,6 +76,7 @@ class SchedulerRunRecord(EventAlphaModel):
                 "status": status,
                 "finished_at": utc_now(),
                 "errors": list(errors if errors is not None else self.errors),
+                "warnings": list(warnings if warnings is not None else self.warnings),
                 "notes": list(notes if notes is not None else self.notes),
             }
         )

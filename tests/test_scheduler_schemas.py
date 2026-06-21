@@ -39,10 +39,18 @@ def test_scheduler_job_config_custom_values() -> None:
 def test_scheduler_run_record_can_finish() -> None:
     """Run records should have generated IDs and supported statuses."""
     record = SchedulerRunRecord(job_id="status", job_type="scheduler_status")
-    finished = record.finish("success", notes=["ok"])
+    finished = record.finish("success", warnings=["careful"], notes=["ok"])
 
     assert record.run_id.startswith("SCHED_RUN_")
     assert record.status == "started"
     assert finished.status == "success"
     assert finished.finished_at is not None
+    assert finished.warnings == ["careful"]
     assert finished.notes == ["ok"]
+
+
+def test_scheduler_job_config_accepts_urgent_scan() -> None:
+    """Urgent event scan should be a supported scheduler job type."""
+    config = SchedulerJobConfig(job_id="urgent", job_type="urgent_event_scan")
+
+    assert config.job_type == "urgent_event_scan"

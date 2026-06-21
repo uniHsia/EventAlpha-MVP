@@ -8,6 +8,7 @@ from typing import Any
 from .jobs import run_candidate_analysis, run_news_lifecycle_scan, run_scheduler_status
 from .schemas import SchedulerJobConfig, SchedulerRunRecord
 from .state_store import SchedulerStateStore
+from .urgent_jobs import run_urgent_event_scan
 
 
 SchedulerJobRunner = Callable[[SchedulerJobConfig, SchedulerStateStore], SchedulerRunRecord]
@@ -16,6 +17,7 @@ JOB_RUNNERS: dict[str, SchedulerJobRunner] = {
     "news_lifecycle_scan": run_news_lifecycle_scan,
     "candidate_analysis": run_candidate_analysis,
     "scheduler_status": run_scheduler_status,
+    "urgent_event_scan": run_urgent_event_scan,
 }
 
 
