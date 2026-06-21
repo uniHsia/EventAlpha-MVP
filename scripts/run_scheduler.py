@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import sys
 from argparse import ArgumentParser
+import json
+from datetime import timedelta
 from pathlib import Path
 from typing import Any
 
@@ -20,7 +22,9 @@ from eventalpha.scheduler import (  # noqa: E402
     SchedulerStateStore,
     run_registered_job,
 )
-from eventalpha.schemas import RISK_DISCLAIMER  # noqa: E402
+from eventalpha.orchestration import run_event_pipeline  # noqa: E402
+from eventalpha.schemas import RISK_DISCLAIMER, RawNews  # noqa: E402
+from eventalpha.schemas.base import utc_now  # noqa: E402
 from eventalpha.services import LedgerService  # noqa: E402
 
 
@@ -53,6 +57,7 @@ def run_scheduler_once(
     market_provider: str = "mock",
     allow_partial_review: bool = True,
     ledger_path: str | Path | None = None,
+    demo_create_due_review: bool = False,
     interval_minutes: int = 60,
     state_path: str | Path = DEFAULT_SCHEDULER_STATE_PATH,
     runs_path: str | Path = DEFAULT_SCHEDULER_RUNS_PATH,
@@ -79,6 +84,8 @@ def run_scheduler_once(
         dry_run=not execute,
     )
     store = SchedulerStateStore(state_path=state_path, runs_path=runs_path)
+    if demo_create_due_review:
+        ledger_path = _create_demo_due_review_ledger(ledger_path)
     _ensure_config(store, config)
     record = run_registered_job(
         config,
@@ -233,6 +240,27 @@ def _parse_review_horizons(values: list[str] | None) -> list[str] | None:
     return horizons or None
 
 
+def _create_demo_due_review_ledger(ledger_path: str | Path | None = None) -> Path:
+    path = Path(ledger_path) if ledger_path else ROOT / "data/cache/auto_review_demo.sqlite3"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    if path.exists():
+        path.unlink()
+    ledger = LedgerService(path)
+    fixture = ROOT / "tests/fixtures/demo_events.json"
+    raw_news = RawNews(**json.loads(fixture.read_text(encoding="utf-8"))[0])
+    result = run_event_pipeline(raw_news, ledger_service=ledger)
+    prediction = result["prediction_ledger_entry"]
+    tasks = ledger.get_review_tasks(prediction.prediction_id)
+    target = next((task for task in tasks if task.horizon == "T+1"), tasks[0])
+    with ledger.repo.connect() as conn:
+        conn.execute(
+            "UPDATE review_tasks SET due_at = ? WHERE task_id = ?",
+            ((utc_now() - timedelta(minutes=1)).isoformat(), target.task_id),
+        )
+        conn.commit()
+    return path
+
+
 def main(argv: list[str] | None = None) -> None:
     """Run the scheduler CLI."""
     parser = ArgumentParser(description="Run EventAlpha scheduler jobs.")
@@ -269,6 +297,11 @@ def main(argv: list[str] | None = None) -> None:
     parser.add_argument("--state-path", default=str(DEFAULT_SCHEDULER_STATE_PATH), help="Scheduler state JSON path.")
     parser.add_argument("--runs-path", default=str(DEFAULT_SCHEDULER_RUNS_PATH), help="Scheduler runs JSONL path.")
     parser.add_argument("--ledger-path", default=None, help="Optional SQLite ledger path for review jobs.")
+    parser.add_argument(
+        "--demo-create-due-review",
+        action="store_true",
+        help="Create an isolated demo ledger with one due AI-export review task before running review jobs.",
+    )
     args = parser.parse_args(argv)
 
     if args.daemon:
@@ -320,6 +353,7 @@ def main(argv: list[str] | None = None) -> None:
         market_provider=args.market_provider,
         allow_partial_review=args.allow_partial_review,
         ledger_path=args.ledger_path,
+        demo_create_due_review=args.demo_create_due_review,
         interval_minutes=args.interval_minutes,
         state_path=args.state_path,
         runs_path=args.runs_path,

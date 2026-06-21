@@ -477,9 +477,10 @@ python scripts/run_scheduler.py --once review_due_scan
 python scripts/run_scheduler.py --once auto_review_runner
 python scripts/run_scheduler.py --once auto_review_runner --execute
 python scripts/run_scheduler.py --once auto_review_runner --execute --market-provider csv
+python scripts/run_scheduler.py --once auto_review_runner --execute --market-provider mock --demo-create-due-review
 ```
 
-Defaults remain dry-run, mock market provider, no LLM, no network, no UI, no trading instructions, and no ledger schema changes. See `docs/phase6c_auto_review_runner.md` for run summaries, provider choices, partial-failure handling, and safety boundaries.
+Defaults remain dry-run, mock market provider, no LLM, no network, no UI, no trading instructions, and no ledger schema changes. See `docs/phase6c_auto_review_runner.md` and `docs/phase6c1_review_result_integrity.md` for run summaries, provider choices, partial-failure handling, result-integrity checks, and safety boundaries.
 
 ## 后续路线
 

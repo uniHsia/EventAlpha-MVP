@@ -42,6 +42,8 @@ python scripts/run_scheduler.py --once auto_review_runner --execute --market-pro
 
 Successful execute runs may save `ReviewResult`, `PredictionReviewSummary`, `RuleUpdate`, and mark the reviewed task `completed`. This reuses existing ledger tables and services; no schema migration is introduced.
 
+Phase 6C.1 tightens this rule: a task is marked reviewed/completed only when at least one asset-level `ReviewResult` is produced. See `docs/phase6c1_review_result_integrity.md` for the result-integrity checks and demo fixture.
+
 ## Market Providers
 
 Provider selection is explicit:

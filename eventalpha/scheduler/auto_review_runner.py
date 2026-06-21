@@ -14,9 +14,9 @@ from eventalpha.data_sources import (
     MockMarketDataProvider,
     ProviderRouter,
 )
-from eventalpha.orchestration import run_review_pipeline
+from eventalpha.agents import review_asset, summarize_reviews
 from eventalpha.schemas import MarketDataError, PredictionLedgerEntry, ReviewTask
-from eventalpha.services import LedgerService
+from eventalpha.services import LedgerService, update_rule_from_review
 
 from .review_schemas import AutoReviewRunSummary, ReviewDueTaskView
 
@@ -31,10 +31,10 @@ class AutoReviewRunner:
         self,
         ledger_service: LedgerService | None = None,
         *,
-        review_pipeline_runner: ReviewPipelineRunner = run_review_pipeline,
+        review_pipeline_runner: ReviewPipelineRunner | None = None,
     ) -> None:
         self.ledger_service = ledger_service or LedgerService()
-        self.review_pipeline_runner = review_pipeline_runner
+        self.review_pipeline_runner = review_pipeline_runner or run_auto_review_pipeline
 
     def scan_due_tasks(
         self,
@@ -88,6 +88,13 @@ class AutoReviewRunner:
                 warnings.append(f"Missing prediction for task {task.task_id}: {task.prediction_id}")
                 skipped_task_count += 1
                 continue
+            asset_count = len(prediction.predicted_assets)
+            if asset_count == 0:
+                warning = f"Skipped task {task.task_id}: no_predicted_assets"
+                warnings.append(warning)
+                notes.append(f"Skipped task: {_task_note(task, prediction)} assets=0 reason=no_predicted_assets.")
+                skipped_task_count += 1
+                continue
             try:
                 provider = build_market_provider(market_provider, prediction=prediction)
                 result = self.review_pipeline_runner(
@@ -99,11 +106,23 @@ class AutoReviewRunner:
                 )
                 review_results = list(result.get("review_results") or [])
                 rule_update = result.get("rule_update")
+                if not review_results:
+                    warnings.append(f"Skipped task {task.task_id}: no_review_results")
+                    notes.append(
+                        f"Skipped task: {_task_note(task, prediction)} "
+                        f"assets={asset_count} results=0 reason=no_review_results."
+                    )
+                    skipped_task_count += 1
+                    continue
                 reviewed_task_count += 1
                 review_result_count += len(review_results)
                 rule_update_count += 1 if rule_update is not None else 0
                 self.ledger_service.update_review_task_status(task.task_id, "completed")
-                notes.append(f"Reviewed task: {_task_note(task, prediction)} results={len(review_results)}.")
+                notes.append(
+                    f"Reviewed task: {_task_note(task, prediction)} "
+                    f"assets={asset_count} results={len(review_results)} "
+                    f"rule_updates={1 if rule_update is not None else 0}."
+                )
             except (MarketDataError, RuntimeError, ValueError) as exc:
                 message = f"Review failed for task {task.task_id}: {exc}"
                 if allow_partial_review:
@@ -141,7 +160,7 @@ class AutoReviewRunner:
                 status=task.status,
                 notes=["Prediction not found."],
             )
-        asset_count = len([asset for asset in prediction.predicted_assets if asset.time_window == task.horizon])
+        asset_count = len(prediction.predicted_assets)
         return ReviewDueTaskView(
             task_id=task.task_id,
             prediction_id=task.prediction_id,
@@ -170,6 +189,59 @@ def build_market_provider(
     if provider == "akshare":
         return AkShareMarketDataProvider()
     raise ValueError(f"Unsupported market provider: {market_provider}")
+
+
+def run_auto_review_pipeline(
+    *,
+    prediction: PredictionLedgerEntry,
+    ledger_service: LedgerService,
+    market_data: MarketDataProvider,
+    horizon: str,
+    persist: bool = True,
+) -> dict[str, Any]:
+    """Review all predicted assets for the due task horizon.
+
+    The core review pipeline filters assets by their original time_window. Auto
+    review tasks instead represent matured review windows, so every predicted
+    asset should be reviewed against the due task horizon.
+    """
+    review_results = [
+        review_asset(prediction, asset, market_data, horizon=horizon)
+        for asset in prediction.predicted_assets
+    ]
+    if not review_results:
+        return {
+            "prediction": prediction,
+            "review_result": None,
+            "review_results": [],
+            "review_summary": None,
+            "rule_update": None,
+        }
+    review_summary = summarize_reviews(
+        prediction.model_copy(
+            update={
+                "predicted_assets": [
+                    asset.model_copy(update={"time_window": horizon})
+                    for asset in prediction.predicted_assets
+                ]
+            }
+        ),
+        review_results,
+        horizon=horizon,
+    )
+    rule_update = update_rule_from_review(prediction, review_summary)
+    if persist:
+        for review_result in review_results:
+            ledger_service.save_review_result(review_result)
+        ledger_service.save_review_summary(review_summary)
+        ledger_service.save_rule_update(rule_update)
+    return {
+        "prediction": prediction,
+        "review_result": review_results[0],
+        "review_results": review_results,
+        "review_summary": review_summary,
+        "rule_update": rule_update,
+    }
 
 
 def _view_note(view: ReviewDueTaskView) -> str:

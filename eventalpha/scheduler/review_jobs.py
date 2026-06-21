@@ -2,11 +2,10 @@
 
 from __future__ import annotations
 
-from eventalpha.orchestration import run_review_pipeline
 from eventalpha.schemas.base import utc_now
 from eventalpha.services import LedgerService
 
-from .auto_review_runner import AutoReviewRunner, ReviewPipelineRunner
+from .auto_review_runner import AutoReviewRunner, ReviewPipelineRunner, run_auto_review_pipeline
 from .review_schemas import AutoReviewRunSummary
 from .schemas import SchedulerJobConfig, SchedulerRunRecord
 from .state_store import SchedulerStateStore
@@ -58,7 +57,7 @@ def run_auto_review_runner(
     try:
         runner = AutoReviewRunner(
             ledger_service=ledger_service,
-            review_pipeline_runner=review_pipeline_runner or run_review_pipeline,
+            review_pipeline_runner=review_pipeline_runner or run_auto_review_pipeline,
         )
         summary = runner.run(
             dry_run=config.dry_run,
