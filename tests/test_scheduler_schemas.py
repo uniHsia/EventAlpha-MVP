@@ -19,6 +19,10 @@ def test_scheduler_job_config_defaults_are_safe() -> None:
     assert config.use_llm_anti_spurious is False
     assert config.persist is False
     assert config.dry_run is True
+    assert config.max_review_tasks == 5
+    assert config.review_horizons is None
+    assert config.market_provider == "mock"
+    assert config.allow_partial_review is True
 
 
 def test_scheduler_job_config_custom_values() -> None:
@@ -54,3 +58,12 @@ def test_scheduler_job_config_accepts_urgent_scan() -> None:
     config = SchedulerJobConfig(job_id="urgent", job_type="urgent_event_scan")
 
     assert config.job_type == "urgent_event_scan"
+
+
+def test_scheduler_job_config_accepts_review_jobs() -> None:
+    """Review scan and auto-review should be supported scheduler job types."""
+    scan = SchedulerJobConfig(job_id="review_due_scan", job_type="review_due_scan")
+    runner = SchedulerJobConfig(job_id="auto_review_runner", job_type="auto_review_runner")
+
+    assert scan.job_type == "review_due_scan"
+    assert runner.job_type == "auto_review_runner"

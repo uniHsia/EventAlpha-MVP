@@ -15,6 +15,8 @@ SchedulerJobType = Literal[
     "candidate_analysis",
     "scheduler_status",
     "urgent_event_scan",
+    "review_due_scan",
+    "auto_review_runner",
 ]
 SchedulerRunStatus = Literal["started", "success", "failed", "skipped", "dry_run"]
 
@@ -36,8 +38,12 @@ class SchedulerJobConfig(EventAlphaModel):
     use_llm_anti_spurious: bool = False
     persist: bool = False
     dry_run: bool = True
+    max_review_tasks: int = 5
+    review_horizons: list[str] | None = None
+    market_provider: str = "mock"
+    allow_partial_review: bool = True
 
-    @field_validator("interval_minutes", "limit")
+    @field_validator("interval_minutes", "limit", "max_review_tasks")
     @classmethod
     def positive_int(cls, value: int) -> int:
         """Keep interval and limit positive."""

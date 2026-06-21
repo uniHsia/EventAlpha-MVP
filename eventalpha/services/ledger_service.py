@@ -477,6 +477,55 @@ class LedgerService:
                 for row in rows
             ]
 
+    def list_due_review_tasks(
+        self,
+        now: Any | None = None,
+        limit: int = 5,
+        horizons: list[str] | None = None,
+    ) -> list[ReviewTask]:
+        """Read pending review tasks due at or before the supplied timestamp."""
+        due_at = _iso(now or utc_now())
+        params: list[Any] = [due_at]
+        horizon_clause = ""
+        if horizons:
+            placeholders = ", ".join("?" for _ in horizons)
+            horizon_clause = f" AND horizon IN ({placeholders})"
+            params.extend(horizons)
+        params.append(max(int(limit), 1))
+        with self.repo.connect() as conn:
+            rows = conn.execute(
+                f"""
+                SELECT * FROM review_tasks
+                WHERE status = 'pending'
+                  AND due_at <= ?
+                  {horizon_clause}
+                ORDER BY due_at ASC, id ASC
+                LIMIT ?
+                """,
+                params,
+            ).fetchall()
+            return [
+                ReviewTask(
+                    task_id=row["task_id"],
+                    prediction_id=row["prediction_id"],
+                    event_id=row["event_id"],
+                    horizon=row["horizon"],
+                    due_at=row["due_at"],
+                    status=row["status"],
+                    created_at=row["created_at"],
+                )
+                for row in rows
+            ]
+
+    def update_review_task_status(self, task_id: str, status: str) -> None:
+        """Update an existing review task status without changing schema."""
+        with self.repo.connect() as conn:
+            conn.execute(
+                "UPDATE review_tasks SET status = ? WHERE task_id = ?",
+                (status, task_id),
+            )
+            conn.commit()
+
     def save_review_result(self, result: ReviewResult) -> str:
         """Save a single-asset review result."""
         with self.repo.connect() as conn:

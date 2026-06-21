@@ -21,9 +21,17 @@ from eventalpha.scheduler import (  # noqa: E402
     run_registered_job,
 )
 from eventalpha.schemas import RISK_DISCLAIMER  # noqa: E402
+from eventalpha.services import LedgerService  # noqa: E402
 
 
-SUPPORTED_JOBS = ("news_lifecycle_scan", "candidate_analysis", "scheduler_status", "urgent_event_scan")
+SUPPORTED_JOBS = (
+    "news_lifecycle_scan",
+    "candidate_analysis",
+    "scheduler_status",
+    "urgent_event_scan",
+    "review_due_scan",
+    "auto_review_runner",
+)
 
 
 def run_scheduler_once(
@@ -40,6 +48,11 @@ def run_scheduler_once(
     use_llm_extraction: bool = False,
     use_llm_causal: bool = False,
     use_llm_anti_spurious: bool = False,
+    max_review_tasks: int = 5,
+    review_horizons: list[str] | None = None,
+    market_provider: str = "mock",
+    allow_partial_review: bool = True,
+    ledger_path: str | Path | None = None,
     interval_minutes: int = 60,
     state_path: str | Path = DEFAULT_SCHEDULER_STATE_PATH,
     runs_path: str | Path = DEFAULT_SCHEDULER_RUNS_PATH,
@@ -58,6 +71,10 @@ def run_scheduler_once(
         use_llm_extraction=use_llm_extraction,
         use_llm_causal=use_llm_causal,
         use_llm_anti_spurious=use_llm_anti_spurious,
+        max_review_tasks=max_review_tasks,
+        review_horizons=review_horizons,
+        market_provider=market_provider,
+        allow_partial_review=allow_partial_review,
         persist=persist,
         dry_run=not execute,
     )
@@ -67,6 +84,7 @@ def run_scheduler_once(
         config,
         store,
         **_agent_kwargs(config),
+        **_review_kwargs(config, ledger_path),
     )
     return {
         "config": config,
@@ -88,6 +106,10 @@ def build_default_configs(
     use_llm_extraction: bool = False,
     use_llm_causal: bool = False,
     use_llm_anti_spurious: bool = False,
+    max_review_tasks: int = 5,
+    review_horizons: list[str] | None = None,
+    market_provider: str = "mock",
+    allow_partial_review: bool = True,
 ) -> list[SchedulerJobConfig]:
     """Build default scheduler configs for daemon mode."""
     return [
@@ -109,6 +131,26 @@ def build_default_configs(
             interval_minutes=max(15, min(interval_minutes, 60)),
             limit=min(limit, 10),
             persist=False,
+            dry_run=not execute,
+        ),
+        SchedulerJobConfig(
+            job_id="review_due_scan",
+            job_type="review_due_scan",
+            interval_minutes=interval_minutes,
+            max_review_tasks=max_review_tasks,
+            review_horizons=review_horizons,
+            market_provider=market_provider,
+            allow_partial_review=allow_partial_review,
+            dry_run=True,
+        ),
+        SchedulerJobConfig(
+            job_id="auto_review_runner",
+            job_type="auto_review_runner",
+            interval_minutes=interval_minutes,
+            max_review_tasks=max_review_tasks,
+            review_horizons=review_horizons,
+            market_provider=market_provider,
+            allow_partial_review=allow_partial_review,
             dry_run=not execute,
         ),
         SchedulerJobConfig(
@@ -144,6 +186,12 @@ def _agent_kwargs(config: SchedulerJobConfig) -> dict[str, Any]:
     return kwargs
 
 
+def _review_kwargs(config: SchedulerJobConfig, ledger_path: str | Path | None) -> dict[str, Any]:
+    if config.job_type not in {"review_due_scan", "auto_review_runner"}:
+        return {}
+    return {"ledger_service": LedgerService(ledger_path)} if ledger_path else {}
+
+
 def _ensure_config(store: SchedulerStateStore, config: SchedulerJobConfig) -> None:
     jobs = [job for job in store.load_config() if job.job_id != config.job_id]
     jobs.append(config)
@@ -176,6 +224,15 @@ def _print_record(record: SchedulerRunRecord) -> None:
     print(f"\n{RISK_DISCLAIMER}")
 
 
+def _parse_review_horizons(values: list[str] | None) -> list[str] | None:
+    if not values:
+        return None
+    horizons: list[str] = []
+    for value in values:
+        horizons.extend(item.strip() for item in value.split(",") if item.strip())
+    return horizons or None
+
+
 def main(argv: list[str] | None = None) -> None:
     """Run the scheduler CLI."""
     parser = ArgumentParser(description="Run EventAlpha scheduler jobs.")
@@ -190,12 +247,28 @@ def main(argv: list[str] | None = None) -> None:
     parser.add_argument("--limit", type=int, default=10, help="Item or active event limit.")
     parser.add_argument("--top-n", type=int, default=None, help="Priority event display/analysis limit.")
     parser.add_argument("--persist", action="store_true", help="Allow candidate analysis to write ledger.")
+    parser.add_argument("--max-review-tasks", type=int, default=5, help="Maximum due review tasks to scan or run.")
+    parser.add_argument(
+        "--review-horizon",
+        action="append",
+        default=None,
+        help="Review horizon filter; repeat or pass comma-separated values such as T+1,T+3.",
+    )
+    parser.add_argument(
+        "--market-provider",
+        default="mock",
+        choices=["mock", "csv", "router", "akshare"],
+        help="Market provider for auto_review_runner execute mode.",
+    )
+    parser.add_argument("--allow-partial-review", dest="allow_partial_review", action="store_true", default=True)
+    parser.add_argument("--no-allow-partial-review", dest="allow_partial_review", action="store_false")
     parser.add_argument("--use-llm-extraction", action="store_true", help="Use mock/real LLM extraction when executing candidate analysis.")
     parser.add_argument("--use-llm-causal", action="store_true", help="Use mock/real LLM causal reasoning when executing candidate analysis.")
     parser.add_argument("--use-llm-anti-spurious", action="store_true", help="Use mock/real LLM anti-spurious check when executing candidate analysis.")
     parser.add_argument("--interval-minutes", type=int, default=60, help="Interval for daemon jobs.")
     parser.add_argument("--state-path", default=str(DEFAULT_SCHEDULER_STATE_PATH), help="Scheduler state JSON path.")
     parser.add_argument("--runs-path", default=str(DEFAULT_SCHEDULER_RUNS_PATH), help="Scheduler runs JSONL path.")
+    parser.add_argument("--ledger-path", default=None, help="Optional SQLite ledger path for review jobs.")
     args = parser.parse_args(argv)
 
     if args.daemon:
@@ -213,6 +286,10 @@ def main(argv: list[str] | None = None) -> None:
             use_llm_extraction=args.use_llm_extraction,
             use_llm_causal=args.use_llm_causal,
             use_llm_anti_spurious=args.use_llm_anti_spurious,
+            max_review_tasks=args.max_review_tasks,
+            review_horizons=_parse_review_horizons(args.review_horizon),
+            market_provider=args.market_provider,
+            allow_partial_review=args.allow_partial_review,
         )
         store.save_config(configs)
         runner = EventAlphaAPScheduler(configs, store=store)
@@ -238,6 +315,11 @@ def main(argv: list[str] | None = None) -> None:
         use_llm_extraction=args.use_llm_extraction,
         use_llm_causal=args.use_llm_causal,
         use_llm_anti_spurious=args.use_llm_anti_spurious,
+        max_review_tasks=args.max_review_tasks,
+        review_horizons=_parse_review_horizons(args.review_horizon),
+        market_provider=args.market_provider,
+        allow_partial_review=args.allow_partial_review,
+        ledger_path=args.ledger_path,
         interval_minutes=args.interval_minutes,
         state_path=args.state_path,
         runs_path=args.runs_path,

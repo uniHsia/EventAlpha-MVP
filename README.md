@@ -466,6 +466,21 @@ python scripts/run_scheduler.py --once scheduler_status
 
 No-items RSS results are warnings rather than hard errors. Defaults remain dry-run, offline, no LLM, no ledger persistence, no UI, and no trading instructions. See `docs/phase6b_urgent_mode_tracking.md` for scoring rules, tracking policy mapping, candidate selection behavior, and safety boundaries.
 
+## Phase 6C Auto Review Runner
+
+Phase 6C adds scheduler jobs for due Prediction Ledger review tasks. `review_due_scan` lists pending due tasks without market data calls or ledger writes. `auto_review_runner` dry-run previews due reviews, while `--execute` runs the existing review pipeline and may save ReviewResult, review summary, RuleUpdate, and mark successful tasks completed.
+
+Run auto-review jobs:
+
+```bash
+python scripts/run_scheduler.py --once review_due_scan
+python scripts/run_scheduler.py --once auto_review_runner
+python scripts/run_scheduler.py --once auto_review_runner --execute
+python scripts/run_scheduler.py --once auto_review_runner --execute --market-provider csv
+```
+
+Defaults remain dry-run, mock market provider, no LLM, no network, no UI, no trading instructions, and no ledger schema changes. See `docs/phase6c_auto_review_runner.md` for run summaries, provider choices, partial-failure handling, and safety boundaries.
+
 ## 后续路线
 
 1. 用真实 LLM 替换 mock Agent，但保持 schema 和 pipeline 接口稳定。

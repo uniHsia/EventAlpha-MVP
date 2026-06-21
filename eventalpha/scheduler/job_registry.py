@@ -6,6 +6,7 @@ from collections.abc import Callable
 from typing import Any
 
 from .jobs import run_candidate_analysis, run_news_lifecycle_scan, run_scheduler_status
+from .review_jobs import run_auto_review_runner, run_review_due_scan
 from .schemas import SchedulerJobConfig, SchedulerRunRecord
 from .state_store import SchedulerStateStore
 from .urgent_jobs import run_urgent_event_scan
@@ -18,6 +19,8 @@ JOB_RUNNERS: dict[str, SchedulerJobRunner] = {
     "candidate_analysis": run_candidate_analysis,
     "scheduler_status": run_scheduler_status,
     "urgent_event_scan": run_urgent_event_scan,
+    "review_due_scan": run_review_due_scan,
+    "auto_review_runner": run_auto_review_runner,
 }
 
 
