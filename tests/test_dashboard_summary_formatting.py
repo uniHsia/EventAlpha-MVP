@@ -79,7 +79,7 @@ def test_dashboard_summary_contains_chinese_metrics_and_sections() -> None:
     text = str(summary.model_dump(mode="json")) + str(page_data.model_dump(mode="json"))
 
     assert [metric.label for metric in summary.metric_cards[:4]] == ["紧急事件", "高优先级", "普通跟踪", "背景观察"]
-    assert summary.friendly_warnings == ["数据源提示：RSS 最近多次未匹配到新闻，不影响本地 demo/mock 流程。"]
+    assert summary.friendly_warnings == ["数据源提示：RSS 最近多次未匹配到新闻，不影响本地只读流程。"]
     assert summary.top_events[0]["标题"] == "AI chip export controls"
     assert summary.recent_reviews[0]["资产"] == "AI chips"
     assert summary.recent_rule_updates[0]["RuleID"] == "RULE_AI_EXPORT_001"

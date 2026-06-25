@@ -1,0 +1,13 @@
+[
+  {
+    "subscriber_id": "demo_user_001",
+    "channel": "wechat_placeholder",
+    "name": "Demo Subscriber",
+    "keywords": ["AI芯片", "出口管制", "中东"],
+    "industries": ["半导体", "AI算力", "能源"],
+    "assets": ["国产AI芯片", "服务器", "原油", "黄金"],
+    "event_types": ["ai_export_control", "geopolitical_conflict"],
+    "min_priority": "A",
+    "enabled": true
+  }
+]

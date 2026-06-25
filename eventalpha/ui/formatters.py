@@ -154,7 +154,7 @@ def format_warning_friendly(values: list[str] | str, *, limit: int = 3) -> list[
     for warning in aggregated:
         lowered = warning.casefold()
         if "rss query matched no items" in lowered:
-            message = "数据源提示：RSS 最近多次未匹配到新闻，不影响本地 demo/mock 流程。"
+            message = "数据源提示：RSS 最近多次未匹配到新闻，不影响本地只读流程。"
         elif "feedparser" in lowered:
             message = "数据源提示：RSS 依赖未安装或不可用，不影响本地只读演示。"
         else:

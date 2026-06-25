@@ -37,7 +37,14 @@ from .schemas import (
     make_news_id,
 )
 from .source_credibility import SourceCredibilityRegistry
+from .source_coverage import (
+    SourceCoverageItem,
+    SourceCoverageReport,
+    collect_source_coverage,
+    write_source_coverage_report,
+)
 from .source_registry import NewsSourceRegistry, build_mock_registry, build_real_registry
+from .search_quality import SearchQualityReport, build_search_quality_report, write_search_quality_report
 
 __all__ = [
     "ClaimConsistencyService",
@@ -67,10 +74,15 @@ __all__ = [
     "RSSProvider",
     "SourceCredibility",
     "SourceCredibilityRegistry",
+    "SourceCoverageItem",
+    "SourceCoverageReport",
+    "SearchQualityReport",
     "TrackedEvent",
     "DEFAULT_LIFECYCLE_STORE_PATH",
     "build_mock_registry",
     "build_real_registry",
+    "build_search_quality_report",
+    "collect_source_coverage",
     "deduplicate_news",
     "event_cluster_to_raw_news",
     "make_claim_id",
@@ -79,4 +91,6 @@ __all__ = [
     "make_news_id",
     "make_tracked_event_id",
     "news_item_to_raw_news",
+    "write_search_quality_report",
+    "write_source_coverage_report",
 ]

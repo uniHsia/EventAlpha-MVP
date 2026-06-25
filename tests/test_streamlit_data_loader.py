@@ -123,8 +123,67 @@ def test_loader_reads_ledger_rows_read_only(tmp_path) -> None:
     assert data.event_cards[0]["event_title"] == "AI export event"
     assert data.review_results[0]["asset_name"] == "AI chips"
     assert data.rule_updates[0]["rule_id"] == "RULE_AI_EXPORT_001"
+    assert bundle["prediction_ledger_rows"][0]["prediction_id"] == "PRED_1"
+    assert bundle["prediction_ledger_rows"][0]["asset_name"] == "AI chips"
     assert bundle["recent_reviews"][0]["资产"] == "AI chips"
     assert bundle["recent_rule_updates"][0]["RuleID"] == "RULE_AI_EXPORT_001"
+
+
+def test_loader_reads_historical_cases_without_writes(tmp_path) -> None:
+    """Historical cases should load from a local JSON store without seeding."""
+    historical_path = tmp_path / "historical_cases.json"
+    historical_path.write_text(
+        json.dumps(
+            {
+                "cases": [
+                    {
+                        "case_id": "CASE_1",
+                        "title": "AI export precedent",
+                        "event_type": "ai_export_control",
+                        "tags": ["manual_seed_demo"],
+                    }
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    bundle = StreamlitDataLoader(
+        reports_dir=tmp_path / "reports",
+        lifecycle_store_path=tmp_path / "missing_lifecycle.json",
+        state_path=tmp_path / "state.json",
+        runs_path=tmp_path / "runs.jsonl",
+        ledger_path=tmp_path / "missing.sqlite3",
+        historical_cases_path=historical_path,
+    ).load(briefing_date=date(2026, 6, 21))
+
+    assert bundle["historical_cases"][0]["case_id"] == "CASE_1"
+    assert bundle["data_status"]["historical_cases_exists"] is True
+
+
+def test_loader_reads_capability_reports_when_present(tmp_path) -> None:
+    reports_dir = tmp_path / "reports"
+    reports_dir.mkdir()
+    (reports_dir / "source_coverage_20260621.json").write_text(
+        json.dumps({"demo_mode": True, "enabled_count": 1, "ok_count": 1, "failed_count": 0, "placeholder_count": 3, "items": []}),
+        encoding="utf-8",
+    )
+    (reports_dir / "search_quality_20260621.json").write_text(
+        json.dumps({"demo_mode": True, "raw_news_count": 2, "after_dedup_count": 2, "cluster_count": 1}),
+        encoding="utf-8",
+    )
+
+    bundle = StreamlitDataLoader(
+        reports_dir=reports_dir,
+        lifecycle_store_path=tmp_path / "missing_lifecycle.json",
+        state_path=tmp_path / "state.json",
+        runs_path=tmp_path / "runs.jsonl",
+        ledger_path=tmp_path / "missing.sqlite3",
+    ).load(briefing_date=date(2026, 6, 21))
+
+    assert bundle["capability_reports"]["source_coverage"]["ok_count"] == 1
+    assert bundle["capability_reports"]["search_quality"]["cluster_count"] == 1
+    assert bundle["capability_reports"]["source_coverage"]["_path"].endswith("source_coverage_20260621.json")
 
 
 def _create_ui_ledger_fixture(path) -> None:
@@ -144,9 +203,50 @@ def _create_ui_ledger_fixture(path) -> None:
                 event_level TEXT,
                 credibility_score REAL,
                 one_sentence TEXT,
+                what_happened TEXT,
+                sources_json TEXT,
+                causal_chain_summary_json TEXT,
+                possible_impacts_json TEXT,
                 risk_factors_json TEXT,
                 verification_indicators_json TEXT,
                 risk_disclaimer TEXT,
+                created_at TEXT
+            );
+            CREATE TABLE market_mappings (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                mapping_id TEXT,
+                event_id TEXT,
+                mapped_assets_json TEXT,
+                watch_indicators_json TEXT,
+                mapping_notes TEXT,
+                created_at TEXT
+            );
+            CREATE TABLE prediction_ledger (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                prediction_id TEXT,
+                event_id TEXT,
+                event_title TEXT,
+                event_type TEXT,
+                publish_time TEXT,
+                event_level TEXT,
+                credibility_score REAL,
+                impact_score INTEGER,
+                status TEXT,
+                created_at TEXT
+            );
+            CREATE TABLE predicted_assets (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                prediction_id TEXT,
+                asset_name TEXT,
+                asset_type TEXT,
+                direction TEXT,
+                time_window TEXT,
+                asset_confidence REAL,
+                chain_confidence REAL,
+                anti_spurious_adjusted_confidence REAL,
+                final_confidence REAL,
+                confidence REAL,
+                benchmark TEXT,
                 created_at TEXT
             );
             CREATE TABLE review_results (
@@ -200,9 +300,29 @@ def _create_ui_ledger_fixture(path) -> None:
             INSERT INTO events (event_id, event_type) VALUES ('EVT_1', 'ai_export_control');
             INSERT INTO event_cards
             (card_id, event_id, event_title, event_level, credibility_score, one_sentence,
+             what_happened, sources_json, causal_chain_summary_json, possible_impacts_json,
              risk_factors_json, verification_indicators_json, risk_disclaimer, created_at)
             VALUES ('CARD_1', 'EVT_1', 'AI export event', 'A', 0.8, 'summary',
+                    'what happened', '["Mock Wire"]', '["policy restriction", "supply limit"]',
+                    '["AI chips"]',
                     '["risk"]', '["verify"]', 'risk disclaimer', '2026-06-21T00:00:00Z');
+            INSERT INTO market_mappings
+            (mapping_id, event_id, mapped_assets_json, watch_indicators_json, mapping_notes, created_at)
+            VALUES ('MAP_1', 'EVT_1', '[{"asset_name": "AI chips"}]', '["watch"]', 'notes',
+                    '2026-06-21T00:00:00Z');
+            INSERT INTO prediction_ledger
+            (prediction_id, event_id, event_title, event_type, publish_time, event_level,
+             credibility_score, impact_score, status, created_at)
+            VALUES ('PRED_1', 'EVT_1', 'AI export event', 'ai_export_control',
+                    '2026-06-21T00:00:00Z', 'A', 0.8, 80, 'tracking',
+                    '2026-06-21T00:00:00Z');
+            INSERT INTO predicted_assets
+            (prediction_id, asset_name, asset_type, direction, time_window,
+             asset_confidence, chain_confidence, anti_spurious_adjusted_confidence,
+             final_confidence, confidence, benchmark, created_at)
+            VALUES ('PRED_1', 'AI chips', 'theme', 'up', 'T+1',
+                    0.8, 0.7, 0.6, 0.65, 0.65, 'CSI300',
+                    '2026-06-21T00:00:00Z');
             INSERT INTO review_results
             (review_id, prediction_id, event_id, horizon, asset_name, predicted_direction,
              actual_return, benchmark_return, excess_return, direction_correct,

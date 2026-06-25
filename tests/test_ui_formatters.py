@@ -143,7 +143,7 @@ def test_warning_aggregation_and_forbidden_terms() -> None:
     assert len(warnings) == 3
     assert warnings[0].startswith("RSS query matched no items.")
     assert warnings[0].endswith("2")
-    assert friendly[0] == "数据源提示：RSS 最近多次未匹配到新闻，不影响本地 demo/mock 流程。"
+    assert friendly[0] == "数据源提示：RSS 最近多次未匹配到新闻，不影响本地只读流程。"
     assert not contains_forbidden_trading_terms("关注方向与验证指标")
 
 
