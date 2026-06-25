@@ -10,6 +10,14 @@ from typing import Any
 import yaml
 
 from eventalpha.config import get_db_path, get_rules_dir
+from eventalpha.news.schemas import (
+    CredibilityEvidence,
+    EventClusterRecord,
+    RawNewsItemRecord,
+    SourceCheckRun,
+    SourceCredibilityState,
+    SourceRegistryEntry,
+)
 from eventalpha.repositories import SQLiteRepository
 from eventalpha.schemas import (
     AntiSpuriousCheck,
@@ -91,8 +99,8 @@ class LedgerService:
                 """
                 INSERT OR REPLACE INTO raw_news
                 (raw_id, title, source, source_type, publish_time, url, language,
-                 raw_text, metadata_json, created_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                 raw_text, metadata_json, source_run_id, created_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     raw_news.raw_id,
@@ -104,11 +112,220 @@ class LedgerService:
                     raw_news.language,
                     raw_news.raw_text,
                     _json(raw_news.metadata),
+                    raw_news.metadata.get("source_run_id"),
                     _iso(raw_news.created_at),
                 ),
             )
             conn.commit()
         return raw_news.raw_id
+
+    def save_news_source(self, source: SourceRegistryEntry) -> str:
+        """Persist one configured source entry."""
+        with self.repo.connect() as conn:
+            conn.execute(
+                """
+                INSERT OR REPLACE INTO news_sources
+                (source_name, source_type, enabled, region, language,
+                 credibility_base, fetch_mode, notes, updated_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    source.source_name,
+                    source.source_type,
+                    int(source.enabled),
+                    source.region,
+                    source.language,
+                    source.credibility_base,
+                    source.fetch_mode,
+                    source.notes,
+                    _iso(utc_now()),
+                ),
+            )
+            conn.commit()
+        return source.source_name
+
+    def save_source_check_run(self, check_run: SourceCheckRun) -> str:
+        """Persist one source fetch/check run."""
+        with self.repo.connect() as conn:
+            conn.execute(
+                """
+                INSERT OR REPLACE INTO source_check_runs
+                (check_run_id, source_run_id, source_name, query, status,
+                 fetched_at, item_count, error_text, raw_result_notes, created_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    check_run.check_run_id,
+                    check_run.source_run_id,
+                    check_run.source_name,
+                    check_run.query,
+                    check_run.status,
+                    _iso(check_run.fetched_at),
+                    check_run.item_count,
+                    check_run.error_text,
+                    check_run.raw_result_notes,
+                    _iso(check_run.fetched_at),
+                ),
+            )
+            conn.commit()
+        return check_run.check_run_id
+
+    def save_raw_news_item(self, item: RawNewsItemRecord) -> str:
+        """Persist one fetched external item before pipeline conversion."""
+        with self.repo.connect() as conn:
+            conn.execute(
+                """
+                INSERT OR REPLACE INTO raw_news_items
+                (collected_item_id, source_run_id, news_id, title, summary, url, source,
+                 source_type, published_at, language, country, raw_text, tags_json,
+                 fetched_at, query, is_duplicate, created_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    item.collected_item_id,
+                    item.source_run_id,
+                    item.news_id,
+                    item.title,
+                    item.summary,
+                    item.url,
+                    item.source,
+                    item.source_type,
+                    _iso(item.published_at),
+                    item.language,
+                    item.country,
+                    item.raw_text,
+                    _json(item.tags),
+                    _iso(item.fetched_at),
+                    item.query,
+                    int(item.is_duplicate),
+                    _iso(item.fetched_at),
+                ),
+            )
+            conn.commit()
+        return item.collected_item_id
+
+    def save_event_cluster(self, record: EventClusterRecord) -> str:
+        """Persist one cluster row for a scout/source run."""
+        with self.repo.connect() as conn:
+            conn.execute(
+                """
+                INSERT OR REPLACE INTO event_clusters
+                (cluster_record_id, source_run_id, cluster_id, canonical_title,
+                 canonical_summary, source_count, item_count, unique_source_count, mainstream_source_count,
+                 first_seen_at, last_seen_at, dominant_keywords_json,
+                 candidate_event_type, cluster_type, independent_confirmation, verification_status, confidence,
+                 debug_reasons_json, created_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    record.cluster_record_id,
+                    record.source_run_id,
+                    record.cluster_id,
+                    record.canonical_title,
+                    record.canonical_summary,
+                    record.source_count,
+                    record.item_count,
+                    record.unique_source_count,
+                    record.mainstream_source_count,
+                    _iso(record.first_seen_at),
+                    _iso(record.last_seen_at),
+                    _json(record.dominant_keywords),
+                    record.candidate_event_type,
+                    record.cluster_type,
+                    int(record.independent_confirmation),
+                    record.verification_status,
+                    record.confidence,
+                    _json(record.debug_reasons),
+                    _iso(utc_now()),
+                ),
+            )
+            conn.commit()
+        return record.cluster_record_id
+
+    def save_cluster_news_links(
+        self,
+        *,
+        source_run_id: str,
+        cluster_id: str,
+        news_ids: list[str],
+    ) -> int:
+        """Persist cluster/news membership rows."""
+        if not news_ids:
+            return 0
+        with self.repo.connect() as conn:
+            for news_id in news_ids:
+                conn.execute(
+                    """
+                    INSERT OR IGNORE INTO cluster_news_links
+                    (source_run_id, cluster_id, news_id, created_at)
+                    VALUES (?, ?, ?, ?)
+                    """,
+                    (
+                        source_run_id,
+                        cluster_id,
+                        news_id,
+                        _iso(utc_now()),
+                    ),
+                )
+            conn.commit()
+        return len(news_ids)
+
+    def save_credibility_evidence(self, evidence: CredibilityEvidence) -> str:
+        """Persist one credibility/evidence record."""
+        with self.repo.connect() as conn:
+            conn.execute(
+                """
+                INSERT OR REPLACE INTO credibility_evidence
+                (evidence_record_id, source_run_id, cluster_id, event_id, evidence_key,
+                 source_name, evidence_type, claim_text, supporting_item_ids_json,
+                 supporting_sources_json, consistency_status, official_evidence_status,
+                 risk_flags_json, note_text, created_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    evidence.evidence_record_id,
+                    evidence.source_run_id,
+                    evidence.cluster_id,
+                    evidence.event_id,
+                    evidence.evidence_key,
+                    evidence.source_name,
+                    evidence.evidence_type,
+                    evidence.claim_text,
+                    _json(evidence.supporting_item_ids),
+                    _json(evidence.supporting_sources),
+                    evidence.consistency_status,
+                    evidence.official_evidence_status,
+                    _json(evidence.risk_flags),
+                    evidence.note_text,
+                    _iso(utc_now()),
+                ),
+            )
+            conn.commit()
+        return evidence.evidence_record_id
+
+    def save_source_credibility_state(self, state: SourceCredibilityState) -> str:
+        """Persist one source credibility baseline row."""
+        with self.repo.connect() as conn:
+            conn.execute(
+                """
+                INSERT OR REPLACE INTO source_credibility_state
+                (source_name, source_type, credibility_tier, historical_accuracy,
+                 weight, last_verified_at, notes, updated_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    state.source_name,
+                    state.source_type,
+                    state.credibility_tier,
+                    state.historical_accuracy,
+                    state.weight,
+                    _iso(state.last_verified_at),
+                    state.notes,
+                    _iso(utc_now()),
+                ),
+            )
+            conn.commit()
+        return state.source_name
 
     def save_event(self, event: StructuredEvent) -> str:
         """Save a structured event."""
@@ -270,8 +487,10 @@ class LedgerService:
                 (card_id, event_id, event_title, event_level, credibility_score,
                  one_sentence, what_happened, sources_json, causal_chain_summary_json,
                  possible_impacts_json, risk_factors_json, verification_indicators_json,
-                 risk_disclaimer, created_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                 history_validation_summary_json, source_evidence_json, verification_status,
+                 official_confirmation, staleness_flag, prediction_gate_status,
+                 prediction_gate_reason, risk_disclaimer, created_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     card.card_id,
@@ -286,6 +505,13 @@ class LedgerService:
                     _json(card.possible_impacts),
                     _json(card.risk_factors),
                     _json(card.verification_indicators),
+                    _json(card.history_validation_summary) if card.history_validation_summary else None,
+                    _json(card.source_evidence),
+                    card.verification_status,
+                    card.official_confirmation,
+                    card.staleness_flag,
+                    card.prediction_gate_status,
+                    card.prediction_gate_reason,
                     card.risk_disclaimer,
                     _iso(card.created_at),
                 ),
@@ -659,5 +885,57 @@ class LedgerService:
             rows = conn.execute(
                 "SELECT * FROM rule_updates WHERE prediction_id = ? ORDER BY id",
                 (prediction_id,),
+            ).fetchall()
+            return [dict(row) for row in rows]
+
+    def get_latest_source_check_runs(self, limit: int = 20) -> list[dict[str, Any]]:
+        """Return latest source check rows for UI/report fallback."""
+        with self.repo.connect() as conn:
+            rows = conn.execute(
+                """
+                SELECT * FROM source_check_runs
+                ORDER BY fetched_at DESC, id DESC
+                LIMIT ?
+                """,
+                (max(int(limit), 1),),
+            ).fetchall()
+            return [dict(row) for row in rows]
+
+    def get_latest_news_sources(self, limit: int = 50) -> list[dict[str, Any]]:
+        """Return configured source metadata rows."""
+        with self.repo.connect() as conn:
+            rows = conn.execute(
+                """
+                SELECT * FROM news_sources
+                ORDER BY source_type ASC, source_name ASC
+                LIMIT ?
+                """,
+                (max(int(limit), 1),),
+            ).fetchall()
+            return [dict(row) for row in rows]
+
+    def get_latest_event_clusters(self, limit: int = 50) -> list[dict[str, Any]]:
+        """Return latest persisted cluster rows."""
+        with self.repo.connect() as conn:
+            rows = conn.execute(
+                """
+                SELECT * FROM event_clusters
+                ORDER BY last_seen_at DESC, id DESC
+                LIMIT ?
+                """,
+                (max(int(limit), 1),),
+            ).fetchall()
+            return [dict(row) for row in rows]
+
+    def get_latest_credibility_evidence(self, limit: int = 100) -> list[dict[str, Any]]:
+        """Return latest evidence rows."""
+        with self.repo.connect() as conn:
+            rows = conn.execute(
+                """
+                SELECT * FROM credibility_evidence
+                ORDER BY id DESC
+                LIMIT ?
+                """,
+                (max(int(limit), 1),),
             ).fetchall()
             return [dict(row) for row in rows]

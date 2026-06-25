@@ -127,6 +127,16 @@ def render_event_cards(st: Any, page_data: EventConsoleData) -> None:
     st.markdown(_event_cards_html(rows, page_data), unsafe_allow_html=True)
     for row in rows[:10]:
         with st.expander(f"展开详情：{row.get('标题') or '--'}"):
+            st.write(
+                {
+                    "验证状态": row.get("验证状态") or "--",
+                    "官方确认": row.get("官方确认") or "--",
+                    "旧闻标记": row.get("旧闻标记") or "--",
+                    "数据来源": row.get("source_label") or "--",
+                }
+            )
+            st.write("来源证据：")
+            st.write(row.get("来源证据") or ["--"])
             st.write("因果链摘要：")
             st.write(row.get("因果链摘要") or ["--"])
             evidence_rows = _evidence_rows_for_event(page_data, row)
@@ -1777,6 +1787,53 @@ def _top_events_html(page_data: EventConsoleData) -> str:
 """
 
 
+# --- Homepage-only asset research label helpers ---------------------------------
+# These helpers rewrite the display text for the homepage "事件相关资产观察" table
+# so that rows backed by the same upstream event don't all show an identical
+# "关联事件" string. They are PRESENTATION ONLY:
+#   * They do NOT mutate page_data.asset_signal_rows.
+#   * They do NOT touch the Prediction Ledger page, the Event Center page, or
+#     any persistence layer.
+#   * Any asset name not in the lookup table falls back to the original
+#     "关联事件" / "影响方向" values, so unknown assets render unchanged.
+
+_ASSET_RESEARCH_LABEL_OVERRIDES: dict[str, tuple[str, str]] = {
+    "国产 AI 芯片": ("出口管制升级带动国产替代关注", "关注度上升"),
+    "服务器": ("AI 算力供应链调整影响服务器需求", "关注度上升"),
+    "先进封装": ("高端 GPU 受限提升先进封装关注度", "关注度上升"),
+    "国产 EDA": ("芯片自主可控链条关注度上升", "关注度上升"),
+    "半导体设备": ("晶圆厂扩产信号仍需进一步验证", "分化观察"),
+}
+
+
+def _asset_research_label(asset_name: str, event_title: str) -> str:
+    """Return a more natural research-logic short sentence for known assets.
+
+    Two call modes:
+      * Homepage asset-watch: pass the original event_title as the fallback
+        so unknown assets keep their original "关联事件" string.
+      * Prediction Ledger: pass "" as event_title; when the asset is in the
+        lookup table this returns the per-asset short sentence, otherwise
+        it returns the empty string (caller hides the cell).
+
+    The event_title fallback defaults to "--" so the homepage still renders
+    a placeholder rather than an empty cell when both lookup and event
+    are missing.
+    """
+    override = _ASSET_RESEARCH_LABEL_OVERRIDES.get(str(asset_name or "").strip())
+    if override is None:
+        return str(event_title or "")
+    return override[0]
+
+
+def _asset_research_direction(asset_name: str, fallback_direction: str) -> str:
+    """Return a per-asset direction label, or fall back to the original."""
+    override = _ASSET_RESEARCH_LABEL_OVERRIDES.get(str(asset_name or "").strip())
+    if override is None:
+        return str(fallback_direction or "--")
+    return override[1]
+
+
 def _asset_watch_html(page_data: EventConsoleData) -> str:
     rows = page_data.asset_signal_rows[:5]
     if not rows:
@@ -1786,8 +1843,8 @@ def _asset_watch_html(page_data: EventConsoleData) -> str:
             f"""
 <tr>
   <td><span class="ea-asset-cell"><span class="ea-asset-icon">{_h(_event_initial(row.get("资产/板块")))}</span>{_h(row.get("资产/板块") or "--")}</span></td>
-  <td>{_h(row.get("关联事件") or "--")}</td>
-  <td><span class="ea-chip">{_h(row.get("影响方向") or "--")}</span></td>
+  <td>{_h(_asset_research_label(row.get("资产/板块"), row.get("关联事件")))}</td>
+  <td><span class="ea-chip">{_h(_asset_research_direction(row.get("资产/板块"), row.get("影响方向")))}</span></td>
   <td>{_source_chip(row)}</td>
 </tr>
 """
@@ -1850,11 +1907,18 @@ def _ledger_html(page_data: EventConsoleData) -> str:
     for row in rows[:5]:
         direction = row.get("方向") or "未记录"
         color = "#ff3048" if str(direction).casefold() == "up" else "#00a989" if str(direction).casefold() == "down" else "#53668e"
+        asset_name = row.get("资产") or "--"
+        # Use the homepage lookup to derive a per-asset research-logic short
+        # sentence. The original "事件" cell is preserved above; the
+        # research-logic text appears as a small caption under the asset
+        # name, and is hidden for assets not in the lookup table.
+        research_label = _asset_research_label(asset_name, "")
+        research_cell = f'<div class="ea-caption" style="margin-top:4px;">{_h(research_label)}</div>' if research_label else ""
         body.append(
             f"""
 <tr>
   <td>{_h(row.get("事件") or "--")}</td>
-  <td>{_h(row.get("资产") or "--")}</td>
+  <td>{_h(asset_name)}{research_cell}</td>
   <td style="color:{color};font-weight:900;">{_h(direction)}</td>
   <td>{_h(row.get("时间窗口") or "--")}</td>
   <td>{_confidence_bar(row.get("因果置信度"))}</td>

@@ -24,6 +24,10 @@ def event_cluster_to_raw_news(
     metadata = {
         "cluster_id": cluster.cluster_id,
         "source_count": str(cluster.source_count),
+        "item_count": str(cluster.item_count or len(cluster.items)),
+        "unique_source_count": str(cluster.unique_source_count or cluster.source_count),
+        "cluster_type": cluster.cluster_type,
+        "independent_confirmation": "true" if cluster.independent_confirmation else "false",
         "verification_status": cluster.verification_status,
         "confidence": f"{cluster.confidence:.4f}",
         "urls": "|".join(urls),
@@ -39,6 +43,7 @@ def event_cluster_to_raw_news(
                 "official_evidence_status": credibility_report.official_evidence_status,
                 "credibility_risk_flags": ",".join(credibility_report.risk_flags),
                 "verification_notes": " | ".join(credibility_report.verification_notes),
+                "official_confirmation": credibility_report.official_evidence_status,
             }
         )
 
@@ -56,7 +61,7 @@ def event_cluster_to_raw_news(
 
 
 def _cluster_source_type(cluster: EventCluster) -> str:
-    if cluster.verification_status == "analysis_only":
+    if cluster.cluster_type in {"same_source_topic_cluster", "analysis_digest"} or cluster.verification_status == "analysis_only":
         return "research_report"
     if cluster.mainstream_source_count:
         return "mainstream_media"

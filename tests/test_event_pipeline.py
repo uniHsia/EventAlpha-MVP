@@ -28,4 +28,5 @@ def test_ai_export_control_event_runs_full_pipeline(tmp_path) -> None:
     assert result["market_mapping"].mapped_assets
     assert RISK_DISCLAIMER in result["event_card"].risk_disclaimer
     assert result["prediction_ledger_entry"].predicted_assets
+    assert result["prediction_gate"]["status"] == "written"
     assert len(result["review_tasks"]) == 3

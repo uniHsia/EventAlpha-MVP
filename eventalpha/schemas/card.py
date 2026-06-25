@@ -24,5 +24,11 @@ class EventCard(TimestampedModel):
     possible_impacts: list[str] = Field(default_factory=list)
     risk_factors: list[str] = Field(default_factory=list)
     verification_indicators: list[str] = Field(default_factory=list)
+    source_evidence: list[dict[str, Any]] = Field(default_factory=list)
+    verification_status: str = "needs_confirmation"
+    official_confirmation: str = "unknown"
+    staleness_flag: str = "fresh"
+    prediction_gate_status: str = "written"
+    prediction_gate_reason: str | None = None
     history_validation_summary: dict[str, Any] | None = None
     risk_disclaimer: str = RISK_DISCLAIMER

@@ -30,9 +30,27 @@ class SQLiteRepository:
     def _apply_migrations(self, conn: sqlite3.Connection) -> None:
         """Add Phase 1.5 columns to existing SQLite databases."""
         migrations = {
+            "raw_news": [
+                ("source_run_id", "TEXT"),
+            ],
             "event_verifications": [
                 ("source_classification", "TEXT"),
                 ("content_contains_official_claim", "INTEGER"),
+            ],
+            "event_cards": [
+                ("history_validation_summary_json", "TEXT"),
+                ("source_evidence_json", "TEXT"),
+                ("verification_status", "TEXT"),
+                ("official_confirmation", "TEXT"),
+                ("staleness_flag", "TEXT"),
+                ("prediction_gate_status", "TEXT"),
+                ("prediction_gate_reason", "TEXT"),
+            ],
+            "event_clusters": [
+                ("item_count", "INTEGER"),
+                ("unique_source_count", "INTEGER"),
+                ("cluster_type", "TEXT"),
+                ("independent_confirmation", "INTEGER DEFAULT 0"),
             ],
             "predicted_assets": [
                 ("asset_confidence", "REAL"),

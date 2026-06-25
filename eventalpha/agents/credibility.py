@@ -59,6 +59,36 @@ def _classify_source(raw_news: RawNews) -> str:
 
 def verify_event(raw_news: RawNews, event: StructuredEvent) -> EventVerification:
     """Assign a deterministic credibility score from source metadata."""
+    cluster_status = raw_news.metadata.get("verification_status")
+    cluster_score = raw_news.metadata.get("cluster_credibility_score") or raw_news.metadata.get("confidence")
+    if raw_news.metadata.get("cluster_id") and cluster_status and cluster_score:
+        try:
+            parsed_score = max(0.0, min(1.0, round(float(cluster_score), 2)))
+        except (TypeError, ValueError):
+            parsed_score = 0.5
+        evidence = [
+            {
+                "source": raw_news.source,
+                "type": "cluster_origin",
+            }
+        ]
+        official_confirmation = raw_news.metadata.get("official_confirmation") or raw_news.metadata.get("official_evidence_status")
+        if official_confirmation and official_confirmation != "no_official_evidence":
+            evidence.append({"source": raw_news.source, "type": official_confirmation})
+        risk_flags = []
+        raw_risk_flags = raw_news.metadata.get("credibility_risk_flags") or ""
+        if raw_risk_flags:
+            risk_flags = [flag for flag in raw_risk_flags.split(",") if flag]
+        return EventVerification(
+            event_id=event.event_id,
+            credibility_score=parsed_score,
+            verification_status=cluster_status,  # type: ignore[arg-type]
+            source_classification=_classify_source(raw_news),  # type: ignore[arg-type]
+            content_contains_official_claim=official_confirmation in {"official_source_present", "official_claim_reported_by_media"},
+            evidence=evidence,
+            risk_flags=risk_flags,
+        )
+
     text = f"{raw_news.title} {raw_news.raw_text}"
     score = 0.45
     evidence: list[dict[str, str]] = []

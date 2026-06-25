@@ -186,6 +186,24 @@ def test_loader_reads_capability_reports_when_present(tmp_path) -> None:
     assert bundle["capability_reports"]["source_coverage"]["_path"].endswith("source_coverage_20260621.json")
 
 
+def test_loader_reads_source_cluster_and_evidence_rows_from_sqlite(tmp_path) -> None:
+    ledger_path = tmp_path / "ledger.sqlite3"
+    _create_source_cluster_fixture(ledger_path)
+
+    bundle = StreamlitDataLoader(
+        reports_dir=tmp_path / "reports",
+        lifecycle_store_path=tmp_path / "missing_lifecycle.json",
+        state_path=tmp_path / "state.json",
+        runs_path=tmp_path / "runs.jsonl",
+        ledger_path=ledger_path,
+    ).load(briefing_date=date(2026, 6, 21))
+
+    assert bundle["source_registry_rows"][0]["source_name"] == "sec_press_releases"
+    assert bundle["source_check_runs"][0]["status"] == "ok"
+    assert bundle["cluster_rows"][0]["cluster_id"] == "CLUSTER_1"
+    assert bundle["credibility_evidence_rows"][0]["evidence_type"] == "source_summary"
+
+
 def _create_ui_ledger_fixture(path) -> None:
     with sqlite3.connect(path) as conn:
         conn.executescript(
@@ -341,5 +359,90 @@ def _create_ui_ledger_fixture(path) -> None:
              new_weight, reason, update_action, created_at)
             VALUES ('UPD_1', 'RULE_AI_EXPORT_001', 'PRED_1', 'REV_1', 'SUM_1',
                     0.7, 0.75, 'worked', 'strengthen', '2026-06-21T00:00:00Z');
+            """
+        )
+
+
+def _create_source_cluster_fixture(path) -> None:
+    with sqlite3.connect(path) as conn:
+        conn.executescript(
+            """
+            CREATE TABLE news_sources (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                source_name TEXT,
+                source_type TEXT,
+                enabled INTEGER,
+                region TEXT,
+                language TEXT,
+                credibility_base REAL,
+                fetch_mode TEXT,
+                notes TEXT,
+                updated_at TEXT
+            );
+            CREATE TABLE source_check_runs (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                check_run_id TEXT,
+                source_run_id TEXT,
+                source_name TEXT,
+                query TEXT,
+                status TEXT,
+                fetched_at TEXT,
+                item_count INTEGER,
+                error_text TEXT,
+                raw_result_notes TEXT,
+                created_at TEXT
+            );
+            CREATE TABLE event_clusters (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                cluster_record_id TEXT,
+                source_run_id TEXT,
+                cluster_id TEXT,
+                canonical_title TEXT,
+                canonical_summary TEXT,
+                source_count INTEGER,
+                item_count INTEGER,
+                unique_source_count INTEGER,
+                mainstream_source_count INTEGER,
+                cluster_type TEXT,
+                independent_confirmation INTEGER,
+                first_seen_at TEXT,
+                last_seen_at TEXT,
+                dominant_keywords_json TEXT,
+                candidate_event_type TEXT,
+                verification_status TEXT,
+                confidence REAL,
+                debug_reasons_json TEXT,
+                created_at TEXT
+            );
+            CREATE TABLE credibility_evidence (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                evidence_record_id TEXT,
+                source_run_id TEXT,
+                cluster_id TEXT,
+                event_id TEXT,
+                evidence_key TEXT,
+                source_name TEXT,
+                evidence_type TEXT,
+                claim_text TEXT,
+                supporting_item_ids_json TEXT,
+                supporting_sources_json TEXT,
+                consistency_status TEXT,
+                official_evidence_status TEXT,
+                risk_flags_json TEXT,
+                note_text TEXT,
+                created_at TEXT
+            );
+            INSERT INTO news_sources
+            (source_name, source_type, enabled, region, language, credibility_base, fetch_mode, notes, updated_at)
+            VALUES ('sec_press_releases', 'official', 1, 'US', 'en', 0.9, 'rss', 'SEC RSS', '2026-06-21T00:00:00Z');
+            INSERT INTO source_check_runs
+            (check_run_id, source_run_id, source_name, query, status, fetched_at, item_count, error_text, raw_result_notes, created_at)
+            VALUES ('SRCCHK_1', 'SRCRUN_1', 'sec_press_releases', 'chip export', 'ok', '2026-06-21T00:00:00Z', 4, NULL, 'feed_url=https://www.sec.gov/news/pressreleases.rss', '2026-06-21T00:00:00Z');
+            INSERT INTO event_clusters
+            (cluster_record_id, source_run_id, cluster_id, canonical_title, canonical_summary, source_count, item_count, unique_source_count, mainstream_source_count, cluster_type, independent_confirmation, first_seen_at, last_seen_at, dominant_keywords_json, candidate_event_type, verification_status, confidence, debug_reasons_json, created_at)
+            VALUES ('CLSTR_1', 'SRCRUN_1', 'CLUSTER_1', 'AI export control cluster', 'summary', 2, 2, 2, 1, 'multi_source_event', 1, '2026-06-21T00:00:00Z', '2026-06-21T01:00:00Z', '[\"chip\", \"export\"]', 'ai_export_control', 'multi_source_supported', 0.82, '[\"multi-source\"]', '2026-06-21T01:00:00Z');
+            INSERT INTO credibility_evidence
+            (evidence_record_id, source_run_id, cluster_id, event_id, evidence_key, source_name, evidence_type, claim_text, supporting_item_ids_json, supporting_sources_json, consistency_status, official_evidence_status, risk_flags_json, note_text, created_at)
+            VALUES ('EVID_1', 'SRCRUN_1', 'CLUSTER_1', 'EVT_1', 'source::sec_press_releases', 'sec_press_releases', 'source_summary', 'Source classified as high.', '[\"NEWS_1\"]', '[\"sec_press_releases\"]', 'consistent', 'official_source_present', '[\"none\"]', 'official', '2026-06-21T01:00:00Z');
             """
         )

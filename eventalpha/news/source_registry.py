@@ -9,19 +9,27 @@ from eventalpha.schemas.base import utc_now
 from .base import NewsProvider
 from .gdelt_provider import GDELTProvider
 from .rss_provider import RSSProvider
-from .schemas import NewsFetchResult, NewsItem
+from .schemas import NewsFetchResult, NewsItem, SourceRegistryEntry
 
 
 DEFAULT_RSS_FEEDS = (
     "https://feeds.bbci.co.uk/news/business/rss.xml",
+    "https://www.sec.gov/news/pressreleases.rss",
+    "https://www.federalreserve.gov/feeds/press_all.xml",
+    "https://semiengineering.com/feed/",
 )
 
 
 class NewsSourceRegistry:
     """Fetch news from multiple providers while isolating single-source failures."""
 
-    def __init__(self, providers: list[NewsProvider]) -> None:
+    def __init__(
+        self,
+        providers: list[NewsProvider],
+        source_entries: list[SourceRegistryEntry] | None = None,
+    ) -> None:
         self.providers = providers
+        self.source_entries = list(source_entries or [])
 
     def fetch_all(self, query: str | None = None, limit_per_source: int = 20) -> NewsFetchResult:
         """Fetch from all providers and aggregate items/errors."""
@@ -49,6 +57,11 @@ class StaticNewsProvider:
 
     name: str
     items: list[NewsItem]
+    source_type: str = "demo"
+    region: str | None = "global"
+    language: str | None = "en"
+    credibility_base: float = 0.3
+    fetch_mode: str = "offline_fixture"
 
     def fetch(self, query: str | None = None, limit: int = 20) -> NewsFetchResult:
         """Return static items without network access."""
@@ -133,7 +146,22 @@ def build_mock_registry() -> NewsSourceRegistry:
             tags=["mock"],
         ),
     ]
-    return NewsSourceRegistry([StaticNewsProvider(name="mock_news", items=items)])
+    provider = StaticNewsProvider(name="mock_news", items=items)
+    return NewsSourceRegistry(
+        [provider],
+        source_entries=[
+            SourceRegistryEntry(
+                source_name=provider.name,
+                source_type=provider.source_type,
+                enabled=True,
+                region=provider.region,
+                language=provider.language,
+                credibility_base=provider.credibility_base,
+                fetch_mode=provider.fetch_mode,
+                notes="Offline fixture for deterministic scout/demo runs.",
+            )
+        ],
+    )
 
 
 def build_real_registry(
@@ -145,15 +173,100 @@ def build_real_registry(
         raise ValueError("source must be one of: all, gdelt, rss")
 
     providers: list[NewsProvider] = []
+    entries: list[SourceRegistryEntry] = []
     if source in {"all", "gdelt"}:
-        providers.append(GDELTProvider())
+        provider = GDELTProvider()
+        setattr(provider, "source_type", "gdelt")
+        setattr(provider, "region", "global")
+        setattr(provider, "language", None)
+        setattr(provider, "credibility_base", 0.62)
+        setattr(provider, "fetch_mode", "api")
+        providers.append(provider)
+        entries.append(
+            SourceRegistryEntry(
+                source_name=provider.name,
+                source_type="gdelt",
+                enabled=True,
+                region="global",
+                language=None,
+                credibility_base=0.62,
+                fetch_mode="api",
+                notes="GDELT DOC API query provider.",
+            )
+        )
     if source in {"all", "rss"}:
         for index, feed_url in enumerate(rss_feeds or list(DEFAULT_RSS_FEEDS)):
+            source_name, source_type, region, language, credibility_base, notes = _rss_metadata(feed_url, index)
             providers.append(
                 RSSProvider(
                     feed_url=feed_url,
-                    name=f"rss_{index + 1}",
-                    source_type="mainstream_media",
+                    name=source_name,
+                    source_type=source_type,
+                    language=language,
                 )
             )
-    return NewsSourceRegistry(providers)
+            provider = providers[-1]
+            setattr(provider, "region", region)
+            setattr(provider, "credibility_base", credibility_base)
+            setattr(provider, "fetch_mode", "rss")
+            entries.append(
+                SourceRegistryEntry(
+                    source_name=source_name,
+                    source_type=source_type,
+                    enabled=True,
+                    region=region,
+                    language=language,
+                    credibility_base=credibility_base,
+                    fetch_mode="rss",
+                    notes=notes,
+                )
+            )
+    return NewsSourceRegistry(providers, source_entries=entries)
+
+
+def _rss_metadata(feed_url: str, index: int) -> tuple[str, str, str | None, str | None, float, str]:
+    normalized = str(feed_url).casefold()
+    if "sec.gov" in normalized:
+        return (
+            "sec_press_releases",
+            "official",
+            "US",
+            "en",
+            0.9,
+            "SEC official press release RSS.",
+        )
+    if "federalreserve.gov" in normalized:
+        return (
+            "federal_reserve_press",
+            "official",
+            "US",
+            "en",
+            0.9,
+            "Federal Reserve official press release feed.",
+        )
+    if "semiengineering.com" in normalized:
+        return (
+            "semi_engineering_feed",
+            "industry_source",
+            "global",
+            "en",
+            0.68,
+            "Semiconductor industry public RSS feed.",
+        )
+    if "bbc" in normalized:
+        return (
+            "bbc_business",
+            "mainstream_media",
+            "global",
+            "en",
+            0.72,
+            "BBC Business RSS feed.",
+        )
+    return (
+        f"rss_{index + 1}",
+        "mainstream_media",
+        None,
+        None,
+        0.6,
+        f"Custom RSS feed: {feed_url}",
+    )

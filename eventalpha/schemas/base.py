@@ -57,6 +57,11 @@ VerificationStatus = Literal[
     "needs_confirmation",
     "low_confidence",
     "rumor",
+    "single_source_low_confidence",
+    "official_single_source",
+    "multi_source_observed",
+    "analysis_only",
+    "conflict_detected",
 ]
 AssetType = Literal[
     "industry",

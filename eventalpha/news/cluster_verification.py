@@ -28,7 +28,7 @@ UNCONFIRMED_HINTS = (
 
 
 class ClusterVerificationService:
-    """Assign preliminary source-support status to an EventCluster."""
+    """Assign structural support status to an EventCluster."""
 
     def verify(self, cluster: EventCluster) -> EventCluster:
         """Return a copied cluster with verification fields updated."""
@@ -50,11 +50,13 @@ def _support_status(cluster: EventCluster) -> str:
     title_text = f"{cluster.canonical_title} {cluster.canonical_summary or ''}".casefold()
     if any(hint in title_text for hint in UNCONFIRMED_HINTS):
         return "unconfirmed_or_considering"
-    if _analysis_only(cluster):
+    if cluster.cluster_type in {"same_source_topic_cluster", "analysis_digest"} or _analysis_only(cluster):
         return "analysis_only"
-    if cluster.source_count >= 3 and cluster.mainstream_source_count >= 2:
+    if cluster.cluster_type == "official_update_cluster":
         return "multi_source_supported"
-    if cluster.source_count >= 2:
+    if cluster.unique_source_count >= 3 and cluster.mainstream_source_count >= 2:
+        return "multi_source_supported"
+    if cluster.unique_source_count >= 2:
         return "multi_source_observed"
     return "single_source"
 
@@ -79,7 +81,7 @@ def _confidence_for_status(cluster: EventCluster, status: str) -> float:
         "unconfirmed_or_considering": 0.30,
     }[status]
     if status.startswith("multi_source"):
-        base += min(max(cluster.source_count - 2, 0) * 0.03, 0.09)
+        base += min(max(cluster.unique_source_count - 2, 0) * 0.03, 0.09)
     return round(min(base, 0.85), 4)
 
 

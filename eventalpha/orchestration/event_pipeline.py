@@ -19,6 +19,32 @@ from eventalpha.schemas import RawNews
 from eventalpha.services import LedgerService, build_prediction_entry
 
 
+def should_write_prediction_ledger(
+    event_card,
+    market_mapping,
+    verification,
+    raw_news: RawNews,
+    prediction_entry=None,
+) -> tuple[bool, str, str]:
+    """Return whether this event should enter Prediction Ledger/ReviewTask."""
+    cluster_type = raw_news.metadata.get("cluster_type")
+    if cluster_type in {"same_source_topic_cluster", "analysis_digest"}:
+        return False, "skipped_observation_cluster_type", "观察卡片，未进入预测账本"
+    if event_card.event_level not in {"S", "A", "B"}:
+        return False, "skipped_low_event_level", "观察卡片，未进入预测账本"
+    if (
+        float(verification.credibility_score or 0) < 0.50
+        or verification.verification_status in {"single_source_low_confidence", "low_confidence", "analysis_only", "conflict_detected"}
+    ):
+        return False, "skipped_low_confidence", "观察卡片，未进入预测账本"
+    has_card_impacts = bool(event_card.possible_impacts)
+    has_predicted_assets = bool(getattr(prediction_entry, "predicted_assets", None))
+    has_mapping_assets = bool(getattr(market_mapping, "mapped_assets", None))
+    if not (has_card_impacts or has_predicted_assets or has_mapping_assets):
+        return False, "skipped_no_assets", "观察卡片，未进入预测账本"
+    return True, "written", "written"
+
+
 def run_event_pipeline(
     raw_news: RawNews,
     ledger_service: LedgerService | None = None,
@@ -79,6 +105,19 @@ def run_event_pipeline(
         anti_spurious,
         market_mapping,
     )
+    gate_allowed, gate_status, gate_reason = should_write_prediction_ledger(
+        event_card=event_card,
+        market_mapping=market_mapping,
+        verification=verification,
+        raw_news=raw_news,
+        prediction_entry=prediction,
+    )
+    event_card = event_card.model_copy(
+        update={
+            "prediction_gate_status": gate_status,
+            "prediction_gate_reason": gate_reason if gate_status != "written" else None,
+        }
+    )
 
     review_tasks = []
     if persist:
@@ -91,8 +130,9 @@ def run_event_pipeline(
         ledger.save_anti_spurious_check(anti_spurious)
         ledger.save_market_mapping(market_mapping)
         ledger.save_event_card(event_card)
-        ledger.save_prediction_ledger(prediction)
-        review_tasks = ledger.create_review_tasks(prediction)
+        if gate_allowed:
+            ledger.save_prediction_ledger(prediction)
+            review_tasks = ledger.create_review_tasks(prediction)
 
     return {
         "raw_news": raw_news,
@@ -109,6 +149,11 @@ def run_event_pipeline(
         "history_validation_summary": history_validation_summary,
         "prediction_ledger_entry": prediction,
         "review_tasks": review_tasks,
+        "prediction_gate": {
+            "allowed": gate_allowed,
+            "status": gate_status,
+            "reason": gate_reason,
+        },
     }
 
 

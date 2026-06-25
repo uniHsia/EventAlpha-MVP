@@ -2,7 +2,10 @@
 
 from __future__ import annotations
 
+import sqlite3
+
 from eventalpha.news import NewsFetchResult, NewsItem, NewsSourceRegistry
+from eventalpha.services import LedgerService
 from scripts.run_event_cluster_scout import run_event_cluster_scout
 
 
@@ -25,6 +28,7 @@ def test_run_event_cluster_scout_mock_analyze_top_enters_pipeline() -> None:
     assert analysis["raw_news"].metadata["cluster_id"] == analysis["cluster"].cluster_id
     assert analysis["pipeline_result"]["event_card"].risk_disclaimer
     assert analysis["pipeline_result"]["prediction_ledger_entry"].prediction_id
+    assert "candidate_priority" in analysis
 
 
 def test_run_event_cluster_scout_with_credibility_outputs_reports() -> None:
@@ -44,6 +48,7 @@ def test_run_event_cluster_scout_analyze_top_with_credibility_metadata() -> None
     assert "cluster_credibility_score" in metadata
     assert "cluster_credibility_status" in metadata
     assert "claim_consistency_status" in metadata
+    assert "candidate_priority" in metadata
 
 
 def test_run_event_cluster_scout_can_use_rss_source_selector() -> None:
@@ -74,3 +79,36 @@ def test_run_event_cluster_scout_can_use_rss_source_selector() -> None:
 
     assert result["fetch_result"].errors == []
     assert len(result["clusters"]) == 1
+
+
+def test_run_event_cluster_scout_persist_writes_source_cluster_and_evidence_rows(tmp_path) -> None:
+    db_path = tmp_path / "scout.sqlite3"
+    ledger = LedgerService(db_path)
+
+    result = run_event_cluster_scout(
+        limit=10,
+        analyze_top=1,
+        with_credibility=True,
+        persist=True,
+        ledger_service=ledger,
+    )
+
+    assert result["source_run_id"].startswith("SRCRUN_")
+    with sqlite3.connect(db_path) as conn:
+        source_count = conn.execute("SELECT COUNT(*) FROM news_sources").fetchone()[0]
+        check_count = conn.execute("SELECT COUNT(*) FROM source_check_runs").fetchone()[0]
+        raw_item_count = conn.execute("SELECT COUNT(*) FROM raw_news_items").fetchone()[0]
+        cluster_count = conn.execute("SELECT COUNT(*) FROM event_clusters").fetchone()[0]
+        evidence_count = conn.execute("SELECT COUNT(*) FROM credibility_evidence").fetchone()[0]
+        event_card_count = conn.execute("SELECT COUNT(*) FROM event_cards").fetchone()[0]
+        source_run_id = conn.execute("SELECT source_run_id FROM raw_news LIMIT 1").fetchone()[0]
+        gate_status = conn.execute("SELECT prediction_gate_status FROM event_cards LIMIT 1").fetchone()[0]
+
+    assert source_count >= 1
+    assert check_count >= 1
+    assert raw_item_count >= 1
+    assert cluster_count >= 1
+    assert evidence_count >= 1
+    assert event_card_count >= 1
+    assert source_run_id == result["source_run_id"]
+    assert gate_status in {"written", "skipped_low_event_level", "skipped_low_confidence", "skipped_no_assets", "skipped_observation_cluster_type"}

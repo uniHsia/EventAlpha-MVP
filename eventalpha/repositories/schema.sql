@@ -9,7 +9,57 @@ CREATE TABLE IF NOT EXISTS raw_news (
     language TEXT,
     raw_text TEXT NOT NULL,
     metadata_json TEXT,
+    source_run_id TEXT,
     created_at TEXT DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS news_sources (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    source_name TEXT UNIQUE NOT NULL,
+    source_type TEXT,
+    enabled INTEGER DEFAULT 1,
+    region TEXT,
+    language TEXT,
+    credibility_base REAL,
+    fetch_mode TEXT,
+    notes TEXT,
+    updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS source_check_runs (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    check_run_id TEXT UNIQUE NOT NULL,
+    source_run_id TEXT NOT NULL,
+    source_name TEXT NOT NULL,
+    query TEXT,
+    status TEXT,
+    fetched_at TEXT,
+    item_count INTEGER,
+    error_text TEXT,
+    raw_result_notes TEXT,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS raw_news_items (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    collected_item_id TEXT UNIQUE NOT NULL,
+    source_run_id TEXT NOT NULL,
+    news_id TEXT NOT NULL,
+    title TEXT,
+    summary TEXT,
+    url TEXT,
+    source TEXT,
+    source_type TEXT,
+    published_at TEXT,
+    language TEXT,
+    country TEXT,
+    raw_text TEXT,
+    tags_json TEXT,
+    fetched_at TEXT,
+    query TEXT,
+    is_duplicate INTEGER DEFAULT 0,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(source_run_id, news_id)
 );
 
 CREATE TABLE IF NOT EXISTS events (
@@ -103,6 +153,13 @@ CREATE TABLE IF NOT EXISTS event_cards (
     possible_impacts_json TEXT,
     risk_factors_json TEXT,
     verification_indicators_json TEXT,
+    history_validation_summary_json TEXT,
+    source_evidence_json TEXT,
+    verification_status TEXT,
+    official_confirmation TEXT,
+    staleness_flag TEXT,
+    prediction_gate_status TEXT,
+    prediction_gate_reason TEXT,
     risk_disclaimer TEXT,
     created_at TEXT DEFAULT CURRENT_TIMESTAMP
 );
@@ -220,4 +277,68 @@ CREATE TABLE IF NOT EXISTS rule_updates (
     reason TEXT,
     update_action TEXT,
     created_at TEXT DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS event_clusters (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    cluster_record_id TEXT UNIQUE NOT NULL,
+    source_run_id TEXT NOT NULL,
+    cluster_id TEXT NOT NULL,
+    canonical_title TEXT,
+    canonical_summary TEXT,
+    source_count INTEGER,
+    item_count INTEGER,
+    unique_source_count INTEGER,
+    mainstream_source_count INTEGER,
+    first_seen_at TEXT,
+    last_seen_at TEXT,
+    dominant_keywords_json TEXT,
+    candidate_event_type TEXT,
+    cluster_type TEXT,
+    independent_confirmation INTEGER DEFAULT 0,
+    verification_status TEXT,
+    confidence REAL,
+    debug_reasons_json TEXT,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(source_run_id, cluster_id)
+);
+
+CREATE TABLE IF NOT EXISTS cluster_news_links (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    source_run_id TEXT NOT NULL,
+    cluster_id TEXT NOT NULL,
+    news_id TEXT NOT NULL,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(source_run_id, cluster_id, news_id)
+);
+
+CREATE TABLE IF NOT EXISTS credibility_evidence (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    evidence_record_id TEXT UNIQUE NOT NULL,
+    source_run_id TEXT,
+    cluster_id TEXT,
+    event_id TEXT,
+    evidence_key TEXT NOT NULL,
+    source_name TEXT,
+    evidence_type TEXT,
+    claim_text TEXT,
+    supporting_item_ids_json TEXT,
+    supporting_sources_json TEXT,
+    consistency_status TEXT,
+    official_evidence_status TEXT,
+    risk_flags_json TEXT,
+    note_text TEXT,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS source_credibility_state (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    source_name TEXT UNIQUE NOT NULL,
+    source_type TEXT,
+    credibility_tier TEXT,
+    historical_accuracy REAL,
+    weight REAL,
+    last_verified_at TEXT,
+    notes TEXT,
+    updated_at TEXT DEFAULT CURRENT_TIMESTAMP
 );

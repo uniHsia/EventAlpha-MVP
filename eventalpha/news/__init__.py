@@ -7,6 +7,7 @@ from .cluster_raw_news_converter import event_cluster_to_raw_news
 from .cluster_credibility import ClusterCredibilityService
 from .cluster_verification import ClusterVerificationService
 from .clustering import NewsClusterer
+from .credibility_mapping import NormalizedClusterCredibility, normalize_cluster_credibility
 from .dedup import NewsDedupResult, deduplicate_news
 from .filters import NewsFilterResult, NewsKeywordFilter
 from .gdelt_provider import GDELTProvider
@@ -54,6 +55,7 @@ __all__ = [
     "ClusterCredibilityReport",
     "ClusterCredibilityService",
     "ClusterVerificationService",
+    "NormalizedClusterCredibility",
     "EventCluster",
     "EventLifecycleMatcher",
     "EventLifecycleStore",
@@ -85,6 +87,7 @@ __all__ = [
     "collect_source_coverage",
     "deduplicate_news",
     "event_cluster_to_raw_news",
+    "normalize_cluster_credibility",
     "make_claim_id",
     "make_cluster_id",
     "make_event_key",

@@ -8,7 +8,7 @@ from datetime import datetime
 
 from pydantic import Field, model_validator
 
-from eventalpha.schemas.base import EventAlphaModel, utc_now
+from eventalpha.schemas.base import EventAlphaModel, new_id, utc_now
 
 
 def make_news_id(
@@ -75,6 +75,54 @@ class NewsFetchResult(EventAlphaModel):
     errors: list[str] = Field(default_factory=list)
 
 
+class SourceRegistryEntry(EventAlphaModel):
+    """Metadata for one configured external news source."""
+
+    source_name: str
+    source_type: str
+    enabled: bool = True
+    region: str | None = None
+    language: str | None = None
+    credibility_base: float = 0.5
+    fetch_mode: str = "unknown"
+    notes: str | None = None
+
+
+class SourceCheckRun(EventAlphaModel):
+    """One fetch/check attempt for a configured source."""
+
+    check_run_id: str = Field(default_factory=lambda: new_id("SRCCHK"))
+    source_run_id: str
+    source_name: str
+    query: str | None = None
+    status: str = "not_checked"
+    fetched_at: datetime = Field(default_factory=utc_now)
+    item_count: int = 0
+    error_text: str | None = None
+    raw_result_notes: str | None = None
+
+
+class RawNewsItemRecord(EventAlphaModel):
+    """One fetched external item before deduplication or clustering."""
+
+    collected_item_id: str = Field(default_factory=lambda: new_id("RAWITEM"))
+    source_run_id: str
+    news_id: str
+    title: str
+    summary: str | None = None
+    url: str | None = None
+    source: str
+    source_type: str = "unknown"
+    published_at: datetime | None = None
+    language: str | None = None
+    country: str | None = None
+    raw_text: str | None = None
+    tags: list[str] = Field(default_factory=list)
+    fetched_at: datetime = Field(default_factory=utc_now)
+    query: str | None = None
+    is_duplicate: bool = False
+
+
 class EventCluster(EventAlphaModel):
     """Lightweight event cluster built from related news items."""
 
@@ -84,11 +132,15 @@ class EventCluster(EventAlphaModel):
     items: list[NewsItem]
     sources: list[str] = Field(default_factory=list)
     source_count: int = 0
+    item_count: int = 0
+    unique_source_count: int = 0
     mainstream_source_count: int = 0
     first_seen_at: datetime | None = None
     last_seen_at: datetime | None = None
     dominant_keywords: list[str] = Field(default_factory=list)
     candidate_event_type: str | None = None
+    cluster_type: str = "single_news_event"
+    independent_confirmation: bool = False
     verification_status: str = "single_source"
     confidence: float = 0.0
     debug_reasons: list[str] = Field(default_factory=list)
@@ -100,7 +152,9 @@ class EventCluster(EventAlphaModel):
             self.cluster_id = make_cluster_id(self.items)
         if not self.sources:
             self.sources = _unique(item.source for item in self.items)
-        self.source_count = len(set(self.sources))
+        self.item_count = len(self.items)
+        self.unique_source_count = len(set(self.sources))
+        self.source_count = self.unique_source_count
         if self.first_seen_at is None or self.last_seen_at is None:
             seen_at = [
                 item.published_at or item.fetched_at
@@ -110,6 +164,11 @@ class EventCluster(EventAlphaModel):
             if seen_at:
                 self.first_seen_at = self.first_seen_at or min(seen_at)
                 self.last_seen_at = self.last_seen_at or max(seen_at)
+        if not self.independent_confirmation:
+            self.independent_confirmation = (
+                self.unique_source_count >= 2
+                and self.cluster_type in {"multi_source_event", "official_update_cluster"}
+            )
         return self
 
 
@@ -164,6 +223,60 @@ class ClusterCredibilityReport(EventAlphaModel):
     official_evidence_status: str
     risk_flags: list[str] = Field(default_factory=list)
     verification_notes: list[str] = Field(default_factory=list)
+
+
+class EventClusterRecord(EventAlphaModel):
+    """Persisted cluster row bound to one source run."""
+
+    cluster_record_id: str = Field(default_factory=lambda: new_id("CLSTR"))
+    source_run_id: str
+    cluster_id: str
+    canonical_title: str
+    canonical_summary: str | None = None
+    source_count: int = 0
+    item_count: int = 0
+    unique_source_count: int = 0
+    mainstream_source_count: int = 0
+    first_seen_at: datetime | None = None
+    last_seen_at: datetime | None = None
+    dominant_keywords: list[str] = Field(default_factory=list)
+    candidate_event_type: str | None = None
+    cluster_type: str = "single_news_event"
+    independent_confirmation: bool = False
+    verification_status: str = "single_source"
+    confidence: float = 0.0
+    debug_reasons: list[str] = Field(default_factory=list)
+
+
+class CredibilityEvidence(EventAlphaModel):
+    """Persisted credibility/evidence annotation for one cluster or event."""
+
+    evidence_record_id: str = Field(default_factory=lambda: new_id("EVID"))
+    source_run_id: str | None = None
+    cluster_id: str | None = None
+    event_id: str | None = None
+    evidence_key: str
+    source_name: str | None = None
+    evidence_type: str
+    claim_text: str
+    supporting_item_ids: list[str] = Field(default_factory=list)
+    supporting_sources: list[str] = Field(default_factory=list)
+    consistency_status: str | None = None
+    official_evidence_status: str | None = None
+    risk_flags: list[str] = Field(default_factory=list)
+    note_text: str | None = None
+
+
+class SourceCredibilityState(EventAlphaModel):
+    """Persisted baseline credibility state for one source."""
+
+    source_name: str
+    source_type: str = "unknown"
+    credibility_tier: str = "unknown"
+    historical_accuracy: float | None = None
+    weight: float = 0.5
+    last_verified_at: datetime | None = None
+    notes: str | None = None
 
 
 def _normalize_url(url: str | None) -> str:

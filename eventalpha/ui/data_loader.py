@@ -106,6 +106,11 @@ class StreamlitDataLoader:
             "prediction_ledger_rows": ui_ledger_rows["prediction_ledger_rows"],
             "event_card_details": ui_ledger_rows["event_card_details"],
             "market_mappings": ui_ledger_rows["market_mappings"],
+            "source_registry_rows": ui_ledger_rows["source_registry_rows"],
+            "source_check_runs": ui_ledger_rows["source_check_runs"],
+            "cluster_rows": ui_ledger_rows["cluster_rows"],
+            "credibility_evidence_rows": ui_ledger_rows["credibility_evidence_rows"],
+            "news_run_summary": ui_ledger_rows["news_run_summary"],
             "historical_cases": historical_cases,
             "capability_reports": capability_reports,
             "data_status": self._build_data_status(reports, latest_report),
@@ -189,9 +194,18 @@ class StreamlitDataLoader:
             reports[key] = payload if isinstance(payload, dict) else {}
         return reports
 
-    def _load_ui_ledger_rows(self, *, notes: list[str]) -> dict[str, list[dict[str, Any]]]:
+    def _load_ui_ledger_rows(self, *, notes: list[str]) -> dict[str, Any]:
         """Load homepage-only SQLite rows without touching backend services."""
-        empty = {"prediction_ledger_rows": [], "event_card_details": [], "market_mappings": []}
+        empty = {
+            "prediction_ledger_rows": [],
+            "event_card_details": [],
+            "market_mappings": [],
+            "source_registry_rows": [],
+            "source_check_runs": [],
+            "cluster_rows": [],
+            "credibility_evidence_rows": [],
+            "news_run_summary": {},
+        }
         ledger_path = self._resolved_ledger_path()
         if ledger_path is None or not Path(ledger_path).exists():
             return empty
@@ -204,6 +218,11 @@ class StreamlitDataLoader:
                     "prediction_ledger_rows": self._query_prediction_ledger_rows(conn),
                     "event_card_details": self._query_event_card_details(conn),
                     "market_mappings": self._query_market_mappings(conn),
+                    "source_registry_rows": self._query_source_registry_rows(conn),
+                    "source_check_runs": self._query_source_check_runs(conn),
+                    "cluster_rows": self._query_cluster_rows(conn),
+                    "credibility_evidence_rows": self._query_credibility_evidence_rows(conn),
+                    "news_run_summary": self._query_news_run_summary(conn),
                 }
         except sqlite3.Error as exc:
             notes.append(f"Homepage read-only ledger query skipped: {exc}")
@@ -257,6 +276,15 @@ class StreamlitDataLoader:
                        sources_json,
                        causal_chain_summary_json,
                        possible_impacts_json,
+                       risk_factors_json,
+                       verification_indicators_json,
+                       history_validation_summary_json,
+                       source_evidence_json,
+                       verification_status,
+                       official_confirmation,
+                       staleness_flag,
+                       prediction_gate_status,
+                       prediction_gate_reason,
                        created_at
                 FROM event_cards
                 ORDER BY id DESC
@@ -287,6 +315,207 @@ class StreamlitDataLoader:
             return [_decode_json_fields(dict(row)) for row in rows]
         except sqlite3.Error:
             return []
+
+    def _query_source_registry_rows(self, conn: sqlite3.Connection) -> list[dict[str, Any]]:
+        try:
+            rows = conn.execute(
+                """
+                SELECT source_name, source_type, enabled, region, language,
+                       credibility_base, fetch_mode, notes, updated_at
+                FROM news_sources
+                ORDER BY source_type ASC, source_name ASC
+                LIMIT ?
+                """,
+                (self.max_items * 3,),
+            ).fetchall()
+            return [dict(row) for row in rows]
+        except sqlite3.Error:
+            return []
+
+    def _query_source_check_runs(self, conn: sqlite3.Connection) -> list[dict[str, Any]]:
+        try:
+            rows = conn.execute(
+                """
+                SELECT check_run_id, source_run_id, source_name, query, status,
+                       fetched_at, item_count, error_text, raw_result_notes, created_at
+                FROM source_check_runs
+                ORDER BY fetched_at DESC, id DESC
+                LIMIT ?
+                """,
+                (self.max_items * 3,),
+            ).fetchall()
+            return [dict(row) for row in rows]
+        except sqlite3.Error:
+            return []
+
+    def _query_cluster_rows(self, conn: sqlite3.Connection) -> list[dict[str, Any]]:
+        try:
+            rows = conn.execute(
+                """
+                SELECT cluster_record_id, source_run_id, cluster_id, canonical_title,
+                       canonical_summary, source_count, item_count, unique_source_count,
+                       mainstream_source_count, cluster_type, independent_confirmation,
+                       first_seen_at, last_seen_at, dominant_keywords_json,
+                       candidate_event_type, verification_status, confidence,
+                       debug_reasons_json, created_at
+                FROM event_clusters
+                ORDER BY last_seen_at DESC, id DESC
+                LIMIT ?
+                """,
+                (self.max_items * 3,),
+            ).fetchall()
+            return [_decode_json_fields(dict(row)) for row in rows]
+        except sqlite3.Error:
+            return []
+
+    def _query_credibility_evidence_rows(self, conn: sqlite3.Connection) -> list[dict[str, Any]]:
+        try:
+            rows = conn.execute(
+                """
+                SELECT evidence_record_id, source_run_id, cluster_id, event_id, evidence_key,
+                       source_name, evidence_type, claim_text, supporting_item_ids_json,
+                       supporting_sources_json, consistency_status, official_evidence_status,
+                       risk_flags_json, note_text, created_at
+                FROM credibility_evidence
+                ORDER BY id DESC
+                LIMIT ?
+                """,
+                (self.max_items * 6,),
+            ).fetchall()
+            return [_decode_json_fields(dict(row)) for row in rows]
+        except sqlite3.Error:
+            return []
+
+    def _query_news_run_summary(self, conn: sqlite3.Connection) -> dict[str, Any]:
+        try:
+            latest = conn.execute(
+                """
+                SELECT source_run_id, MAX(fetched_at) AS fetched_at
+                FROM source_check_runs
+                WHERE source_run_id IS NOT NULL
+                GROUP BY source_run_id
+                ORDER BY fetched_at DESC, source_run_id DESC
+                LIMIT 1
+                """
+            ).fetchone()
+        except sqlite3.Error:
+            return {}
+        if latest is None or not latest["source_run_id"]:
+            return {}
+        source_run_id = latest["source_run_id"]
+
+        def _count(query: str) -> int:
+            try:
+                row = conn.execute(query, (source_run_id,)).fetchone()
+            except sqlite3.Error:
+                return 0
+            return int(row[0] or 0) if row is not None else 0
+
+        summary: dict[str, Any] = {
+            "latest_source_run_id": source_run_id,
+            "latest_checked_at": latest["fetched_at"],
+            "source_check_runs_count": _count("SELECT COUNT(*) FROM source_check_runs WHERE source_run_id = ?"),
+            "raw_news_items_count": _count("SELECT COUNT(*) FROM raw_news_items WHERE source_run_id = ?"),
+            "dedup_news_count": _count("SELECT COUNT(*) FROM raw_news_items WHERE source_run_id = ? AND IFNULL(is_duplicate, 0) = 0"),
+            "event_clusters_count": _count("SELECT COUNT(*) FROM event_clusters WHERE source_run_id = ?"),
+            "cluster_news_links_count": _count("SELECT COUNT(*) FROM cluster_news_links WHERE source_run_id = ?"),
+            "credibility_evidence_count": _count("SELECT COUNT(*) FROM credibility_evidence WHERE source_run_id = ?"),
+        }
+
+        try:
+            source_rows = conn.execute(
+                """
+                SELECT source_name, status, item_count, error_text, fetched_at
+                FROM source_check_runs
+                WHERE source_run_id = ?
+                ORDER BY fetched_at DESC, id DESC
+                """,
+                (source_run_id,),
+            ).fetchall()
+        except sqlite3.Error:
+            source_rows = []
+        summary["source_status_rows"] = [dict(row) for row in source_rows]
+
+        try:
+            cluster_rows = conn.execute(
+                """
+                SELECT cluster_type, item_count, unique_source_count, independent_confirmation,
+                       verification_status, confidence
+                FROM event_clusters
+                WHERE source_run_id = ?
+                ORDER BY id DESC
+                """,
+                (source_run_id,),
+            ).fetchall()
+        except sqlite3.Error:
+            cluster_rows = []
+        summary["cluster_rows"] = [dict(row) for row in cluster_rows]
+
+        try:
+            event_cards_row = conn.execute(
+                """
+                SELECT COUNT(*) AS total,
+                       SUM(CASE WHEN source_evidence_json IS NOT NULL AND source_evidence_json != '[]' THEN 1 ELSE 0 END) AS with_source_evidence,
+                       SUM(CASE WHEN prediction_gate_status = 'written' THEN 1 ELSE 0 END) AS written_count,
+                       SUM(CASE WHEN prediction_gate_status IS NOT NULL AND prediction_gate_status != 'written' THEN 1 ELSE 0 END) AS skipped_count
+                FROM event_cards
+                WHERE event_id IN (
+                    SELECT e.event_id
+                    FROM events e
+                    JOIN raw_news r ON r.raw_id = e.raw_id
+                    WHERE r.source_run_id = ?
+                )
+                """,
+                (source_run_id,),
+            ).fetchone()
+        except sqlite3.Error:
+            event_cards_row = None
+        if event_cards_row is not None:
+            summary["event_cards_count"] = int(event_cards_row["total"] or 0)
+            summary["event_cards_with_source_evidence_count"] = int(event_cards_row["with_source_evidence"] or 0)
+            summary["written_event_cards_count"] = int(event_cards_row["written_count"] or 0)
+            summary["skipped_event_cards_count"] = int(event_cards_row["skipped_count"] or 0)
+
+        try:
+            gate_rows = conn.execute(
+                """
+                SELECT prediction_gate_status, COUNT(*) AS count
+                FROM event_cards
+                WHERE event_id IN (
+                    SELECT e.event_id
+                    FROM events e
+                    JOIN raw_news r ON r.raw_id = e.raw_id
+                    WHERE r.source_run_id = ?
+                )
+                GROUP BY prediction_gate_status
+                """,
+                (source_run_id,),
+            ).fetchall()
+        except sqlite3.Error:
+            gate_rows = []
+        summary["prediction_gate_breakdown"] = [
+            {"status": row["prediction_gate_status"], "count": int(row["count"] or 0)}
+            for row in gate_rows
+        ]
+
+        try:
+            ledger_row = conn.execute(
+                """
+                SELECT COUNT(*) AS total
+                FROM prediction_ledger
+                WHERE event_id IN (
+                    SELECT e.event_id
+                    FROM events e
+                    JOIN raw_news r ON r.raw_id = e.raw_id
+                    WHERE r.source_run_id = ?
+                )
+                """,
+                (source_run_id,),
+            ).fetchone()
+        except sqlite3.Error:
+            ledger_row = None
+        summary["ledger_prediction_count"] = int(ledger_row["total"] or 0) if ledger_row else 0
+        return summary
 
     def _build_data_status(self, reports: list[BriefingReportFile], latest_report: BriefingReportFile | None) -> dict[str, Any]:
         ledger_path = self._resolved_ledger_path()

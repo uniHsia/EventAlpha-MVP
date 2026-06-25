@@ -31,8 +31,12 @@ def test_event_cluster_to_raw_news_preserves_metadata() -> None:
         items=items,
         sources=["Reuters", "Bloomberg"],
         source_count=2,
+        item_count=2,
+        unique_source_count=2,
         mainstream_source_count=2,
         dominant_keywords=["technology", "export", "control"],
+        cluster_type="multi_source_event",
+        independent_confirmation=True,
         verification_status="multi_source_observed",
         confidence=0.62,
     )
@@ -45,6 +49,8 @@ def test_event_cluster_to_raw_news_preserves_metadata() -> None:
     assert raw_news.source_type == "mainstream_media"
     assert raw_news.metadata["cluster_id"] == cluster.cluster_id
     assert raw_news.metadata["source_count"] == "2"
+    assert raw_news.metadata["unique_source_count"] == "2"
+    assert raw_news.metadata["cluster_type"] == "multi_source_event"
     assert raw_news.metadata["verification_status"] == "multi_source_observed"
     assert "https://example.com/ai" in raw_news.metadata["urls"]
     assert items[0].news_id in raw_news.metadata["item_ids"]

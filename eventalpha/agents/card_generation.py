@@ -14,6 +14,7 @@ from eventalpha.schemas import (
     RawNews,
     StructuredEvent,
 )
+from eventalpha.schemas.base import utc_now
 from eventalpha.services import CritiqueCompressionService
 
 
@@ -79,6 +80,16 @@ def generate_event_card(
         possible_impacts=possible_impacts,
         risk_factors=risk_factors,
         verification_indicators=verification_indicators,
+        source_evidence=list(verification.evidence),
+        verification_status=verification.verification_status,
+        official_confirmation=(
+            "official_source_present"
+            if verification.source_classification == "official_source"
+            else "official_claim_reported_by_media"
+            if verification.content_contains_official_claim
+            else "no_official_evidence"
+        ),
+        staleness_flag=_staleness_flag(raw_news.publish_time),
         history_validation_summary=_summary_payload(history_validation_summary),
     )
 
@@ -137,3 +148,17 @@ def _summary_payload(summary: Any | None) -> dict[str, Any] | None:
     if isinstance(summary, dict):
         return dict(summary)
     return None
+
+
+def _staleness_flag(publish_time: Any) -> str:
+    if not hasattr(publish_time, "__sub__"):
+        return "unknown"
+    try:
+        age = utc_now() - publish_time
+    except TypeError:
+        return "unknown"
+    if age.days >= 14:
+        return "stale"
+    if age.days >= 3:
+        return "aging"
+    return "fresh"

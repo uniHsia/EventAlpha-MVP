@@ -15,6 +15,8 @@ def _cluster(title: str, sources: list[tuple[str, str]] | None = None) -> EventC
         items=items,
         sources=[item.source for item in items],
         source_count=len({item.source for item in items}),
+        item_count=len(items),
+        unique_source_count=len({item.source for item in items}),
         mainstream_source_count=sum(1 for item in items if item.source_type == "mainstream_media"),
     )
 

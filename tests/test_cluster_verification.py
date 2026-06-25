@@ -19,6 +19,8 @@ def _cluster(titles_sources: list[tuple[str, str, str]]) -> EventCluster:
         items=items,
         sources=[item.source for item in items],
         source_count=len({item.source for item in items}),
+        item_count=len(items),
+        unique_source_count=len({item.source for item in items}),
         mainstream_source_count=sum(1 for item in items if item.source_type == "mainstream_media"),
     )
 
@@ -37,6 +39,7 @@ def test_multi_source_supported_status() -> None:
 
     assert verified.verification_status == "multi_source_supported"
     assert verified.confidence >= 0.78
+    assert verified.unique_source_count == 3
 
 
 def test_multi_source_observed_and_single_source_statuses() -> None:

@@ -26,9 +26,23 @@ def test_build_real_registry_can_select_gdelt_only() -> None:
 
     assert len(registry.providers) == 1
     assert isinstance(registry.providers[0], GDELTProvider)
+    assert registry.source_entries[0].source_type == "gdelt"
 
 
 def test_build_real_registry_rejects_unknown_source() -> None:
     """Source selection should fail fast for invalid values."""
     with pytest.raises(ValueError, match="source must be one of"):
         build_real_registry(source="unknown")
+
+
+def test_build_real_registry_exposes_source_metadata() -> None:
+    registry = build_real_registry(
+        source="rss",
+        rss_feeds=["https://www.sec.gov/news/pressreleases.rss"],
+    )
+
+    assert len(registry.source_entries) == 1
+    entry = registry.source_entries[0]
+    assert entry.source_name == "sec_press_releases"
+    assert entry.source_type == "official"
+    assert entry.fetch_mode == "rss"
