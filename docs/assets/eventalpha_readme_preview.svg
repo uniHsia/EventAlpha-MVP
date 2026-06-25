@@ -1,0 +1,112 @@
+<svg width="1200" height="720" viewBox="0 0 1200 720" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1200" y2="720" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#EAF4FF"/>
+      <stop offset="0.52" stop-color="#F7FBFF"/>
+      <stop offset="1" stop-color="#EEF7FF"/>
+    </linearGradient>
+    <linearGradient id="nav" x1="0" y1="0" x2="0" y2="720" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#0A1F44"/>
+      <stop offset="1" stop-color="#082A5F"/>
+    </linearGradient>
+    <linearGradient id="hero" x1="285" y1="82" x2="1088" y2="280" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#0B72FF"/>
+      <stop offset="1" stop-color="#19C6FF"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="16" stdDeviation="18" flood-color="#0B2B5E" flood-opacity="0.14"/>
+    </filter>
+    <style>
+      .title { font: 700 34px "Inter", "Microsoft YaHei", Arial, sans-serif; fill: #F8FBFF; }
+      .subtitle { font: 400 18px "Inter", "Microsoft YaHei", Arial, sans-serif; fill: #DCEEFF; }
+      .navText { font: 500 17px "Inter", "Microsoft YaHei", Arial, sans-serif; fill: #C9D8F2; }
+      .navActive { font: 700 17px "Inter", "Microsoft YaHei", Arial, sans-serif; fill: #FFFFFF; }
+      .cardTitle { font: 700 18px "Inter", "Microsoft YaHei", Arial, sans-serif; fill: #12213D; }
+      .cardText { font: 400 14px "Inter", "Microsoft YaHei", Arial, sans-serif; fill: #61708D; }
+      .metric { font: 800 28px "Inter", "Microsoft YaHei", Arial, sans-serif; fill: #172B4D; }
+      .chip { font: 700 12px "Inter", "Microsoft YaHei", Arial, sans-serif; fill: #0B63CE; }
+      .small { font: 500 12px "Inter", "Microsoft YaHei", Arial, sans-serif; fill: #71819E; }
+    </style>
+  </defs>
+
+  <rect width="1200" height="720" rx="34" fill="url(#bg)"/>
+  <rect x="28" y="28" width="1144" height="664" rx="30" fill="#FFFFFF" filter="url(#shadow)"/>
+
+  <rect x="28" y="28" width="222" height="664" rx="30" fill="url(#nav)"/>
+  <circle cx="72" cy="82" r="21" fill="#19C6FF"/>
+  <text x="65" y="90" font-family="Inter, Microsoft YaHei, Arial" font-size="24" font-weight="900" fill="#FFFFFF">E</text>
+  <text x="106" y="78" font-family="Inter, Microsoft YaHei, Arial" font-size="23" font-weight="800" fill="#FFFFFF">EventAlpha</text>
+  <text x="106" y="101" font-family="Inter, Microsoft YaHei, Arial" font-size="12" font-weight="500" fill="#9DB8E8">AI 投研 Agent</text>
+
+  <rect x="50" y="145" width="176" height="42" rx="12" fill="#FFFFFF" fill-opacity="0.14"/>
+  <text x="72" y="172" class="navActive">首页总览</text>
+  <text x="72" y="226" class="navText">事件中心</text>
+  <text x="72" y="274" class="navText">每日简报</text>
+  <text x="72" y="322" class="navText">预测账本</text>
+  <text x="72" y="370" class="navText">自动复盘</text>
+  <text x="72" y="418" class="navText">规则更新</text>
+  <text x="72" y="466" class="navText">生命周期</text>
+  <text x="72" y="514" class="navText">系统状态</text>
+
+  <rect x="285" y="62" width="835" height="54" rx="18" fill="#F3F8FF"/>
+  <text x="314" y="96" class="cardText">搜索已加载的 EventCard / Ledger / ReviewResult / RuleUpdate</text>
+  <rect x="930" y="72" width="170" height="34" rx="12" fill="#0B72FF"/>
+  <text x="960" y="95" font-family="Inter, Microsoft YaHei, Arial" font-size="14" font-weight="700" fill="#FFFFFF">查看今日简报</text>
+
+  <rect x="285" y="136" width="835" height="172" rx="28" fill="url(#hero)"/>
+  <text x="324" y="198" class="title">今日事件研究总览</text>
+  <text x="324" y="233" class="subtitle">从事件发现、因果分析到自动复盘，持续跟踪事件对市场的影响。</text>
+  <rect x="324" y="258" width="218" height="34" rx="17" fill="#FFFFFF" fill-opacity="0.18"/>
+  <text x="345" y="281" font-family="Inter, Microsoft YaHei, Arial" font-size="14" font-weight="700" fill="#FFFFFF">Real / Demo / Placeholder 可审计</text>
+  <circle cx="964" cy="220" r="62" stroke="#FFFFFF" stroke-opacity="0.45" stroke-width="3"/>
+  <circle cx="964" cy="220" r="38" stroke="#FFFFFF" stroke-opacity="0.65" stroke-width="3"/>
+  <path d="M919 247L872 294" stroke="#FFFFFF" stroke-width="10" stroke-linecap="round"/>
+  <path d="M886 236L927 201L958 219L1015 170" stroke="#FFFFFF" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <rect x="285" y="334" width="160" height="116" rx="18" fill="#FFFFFF" stroke="#E4ECF7"/>
+  <text x="309" y="366" class="cardText">本地事件</text>
+  <text x="309" y="405" class="metric">EventCard</text>
+  <rect x="309" y="420" width="88" height="20" rx="10" fill="#EAF4FF"/>
+  <text x="322" y="435" class="chip">本地数据</text>
+
+  <rect x="465" y="334" width="160" height="116" rx="18" fill="#FFFFFF" stroke="#E4ECF7"/>
+  <text x="489" y="366" class="cardText">预测账本</text>
+  <text x="489" y="405" class="metric">Ledger</text>
+  <rect x="489" y="420" width="94" height="20" rx="10" fill="#EEF9F3"/>
+  <text x="502" y="435" font-family="Inter, Microsoft YaHei, Arial" font-size="12" font-weight="700" fill="#188756">可复盘</text>
+
+  <rect x="645" y="334" width="160" height="116" rx="18" fill="#FFFFFF" stroke="#E4ECF7"/>
+  <text x="669" y="366" class="cardText">复盘反馈</text>
+  <text x="669" y="405" class="metric">Review</text>
+  <rect x="669" y="420" width="100" height="20" rx="10" fill="#FFF3DF"/>
+  <text x="682" y="435" font-family="Inter, Microsoft YaHei, Arial" font-size="12" font-weight="700" fill="#B56B00">规则校准</text>
+
+  <rect x="825" y="334" width="295" height="116" rx="18" fill="#FFFFFF" stroke="#E4ECF7"/>
+  <text x="851" y="366" class="cardText">系统健康状态</text>
+  <text x="851" y="405" class="metric">本地 Demo</text>
+  <rect x="1016" y="378" width="62" height="24" rx="12" fill="#EAF8F0"/>
+  <text x="1033" y="395" font-family="Inter, Microsoft YaHei, Arial" font-size="12" font-weight="800" fill="#17824B">正常</text>
+  <text x="851" y="434" class="small">部分数据源仍为待接入</text>
+
+  <rect x="285" y="476" width="405" height="164" rx="22" fill="#FFFFFF" stroke="#E4ECF7"/>
+  <text x="315" y="513" class="cardTitle">重点事件 Top 3</text>
+  <rect x="315" y="532" width="340" height="1" fill="#E9EFF8"/>
+  <text x="315" y="565" class="cardText">事件标题 · 优先级 · 来源标签 · 可信度</text>
+  <rect x="315" y="586" width="95" height="24" rx="12" fill="#EAF4FF"/>
+  <text x="334" y="603" class="chip">EventCard</text>
+  <rect x="422" y="586" width="76" height="24" rx="12" fill="#FFF3DF"/>
+  <text x="440" y="603" font-family="Inter, Microsoft YaHei, Arial" font-size="12" font-weight="700" fill="#B56B00">Demo</text>
+  <text x="315" y="625" class="small">影响方向与关键信号以 chip 展示，缺失字段显示 --</text>
+
+  <rect x="715" y="476" width="405" height="164" rx="22" fill="#FFFFFF" stroke="#E4ECF7"/>
+  <text x="745" y="513" class="cardTitle">因果链影响分析</text>
+  <rect x="745" y="548" width="72" height="44" rx="13" fill="#F2F7FF"/>
+  <text x="767" y="575" class="chip">事件</text>
+  <path d="M826 570H858" stroke="#8CB7F5" stroke-width="3" stroke-linecap="round"/>
+  <rect x="866" y="548" width="72" height="44" rx="13" fill="#F2F7FF"/>
+  <text x="888" y="575" class="chip">变量</text>
+  <path d="M947 570H979" stroke="#8CB7F5" stroke-width="3" stroke-linecap="round"/>
+  <rect x="987" y="548" width="72" height="44" rx="13" fill="#F2F7FF"/>
+  <text x="1009" y="575" class="chip">资产</text>
+  <text x="745" y="625" class="small">证据层标注 source / historical_case / assumption / missing</text>
+</svg>
